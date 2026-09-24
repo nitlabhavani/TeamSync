@@ -1,0 +1,49 @@
+# === STEP 30 — added because no .gitignore existed anywhere in the repo ===
+# Prevents accidental commits of secrets, dependencies, and build output.
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!*.env.example
+
+# Build output
+dist/
+build/
+**/dist/
+**/build/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+**/.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Uploads / runtime data
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/uploads/profiles/*
+!backend/uploads/profiles/.gitkeep
+
+# Private voice messages — separate, non-statically-served root
+# (middleware/directVoiceUpload.js)
+backend/uploads-voice/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Misc caches
+.cache/

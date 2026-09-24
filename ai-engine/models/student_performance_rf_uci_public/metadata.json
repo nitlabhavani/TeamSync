@@ -1,0 +1,223 @@
+{
+  "modelType": "RandomForestRegressor (scikit-learn)",
+  "target": "student performance / risk (continuous)",
+  "targetSources": [
+    "UCI.G3"
+  ],
+  "trainingDate": "2026-08-20T06:31:03.820544+00:00",
+  "featureList": [
+    "age",
+    "Medu",
+    "Fedu",
+    "traveltime",
+    "studytime",
+    "failures",
+    "famrel",
+    "freetime",
+    "goout",
+    "Dalc",
+    "Walc",
+    "health",
+    "absences",
+    "sex_M",
+    "address_U",
+    "schoolsup_yes",
+    "famsup_yes",
+    "paid_yes",
+    "activities_yes",
+    "higher_yes",
+    "internet_yes",
+    "romantic_yes"
+  ],
+  "trainingSampleCount": 454,
+  "validationSampleCount": 97,
+  "testSampleCount": 98,
+  "hyperparameters": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "criterion": "squared_error",
+    "max_depth": null,
+    "max_features": 1.0,
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 2,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 200,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "evaluation": {
+    "train": {
+      "n": 454,
+      "mae": 0.9087210030547036,
+      "rmse": 1.352178457809278,
+      "r2": 0.8076040862914311,
+      "derived_binary_threshold": 12.0,
+      "accuracy": 0.9229074889867841,
+      "precision": 0.9644444444444444,
+      "recall": 0.889344262295082,
+      "f1": 0.9253731343283582,
+      "confusion_matrix": [
+        [
+          202,
+          8
+        ],
+        [
+          27,
+          217
+        ]
+      ]
+    },
+    "validation": {
+      "n": 97,
+      "mae": 2.235128957096741,
+      "rmse": 3.3402464652251918,
+      "r2": 0.29683355102374986,
+      "derived_binary_threshold": 12.0,
+      "accuracy": 0.7216494845360825,
+      "precision": 0.7,
+      "recall": 0.8235294117647058,
+      "f1": 0.7567567567567568,
+      "confusion_matrix": [
+        [
+          28,
+          18
+        ],
+        [
+          9,
+          42
+        ]
+      ]
+    },
+    "test": {
+      "n": 98,
+      "mae": 1.8253263121515668,
+      "rmse": 2.2952246210414957,
+      "r2": 0.42255029948319534,
+      "derived_binary_threshold": 12.0,
+      "accuracy": 0.7959183673469388,
+      "precision": 0.8235294117647058,
+      "recall": 0.7924528301886793,
+      "f1": 0.8076923076923077,
+      "confusion_matrix": [
+        [
+          36,
+          9
+        ],
+        [
+          11,
+          42
+        ]
+      ]
+    }
+  },
+  "featureImportance": [
+    [
+      "failures",
+      0.18101628792925825
+    ],
+    [
+      "absences",
+      0.07151359780553727
+    ],
+    [
+      "age",
+      0.057759522105056436
+    ],
+    [
+      "freetime",
+      0.055680295428596614
+    ],
+    [
+      "goout",
+      0.05376572341180694
+    ],
+    [
+      "Medu",
+      0.05304592068014883
+    ],
+    [
+      "studytime",
+      0.05261472858845688
+    ],
+    [
+      "higher_yes",
+      0.052458187446151966
+    ],
+    [
+      "Dalc",
+      0.05204058080390114
+    ],
+    [
+      "Fedu",
+      0.05186242896506503
+    ],
+    [
+      "Walc",
+      0.04860973618768867
+    ],
+    [
+      "health",
+      0.048605649486005494
+    ],
+    [
+      "famrel",
+      0.044680209940422475
+    ],
+    [
+      "romantic_yes",
+      0.02428521619732074
+    ],
+    [
+      "traveltime",
+      0.023143204572344422
+    ],
+    [
+      "famsup_yes",
+      0.02300128839325464
+    ],
+    [
+      "activities_yes",
+      0.022622979441458187
+    ],
+    [
+      "address_U",
+      0.021037225037438836
+    ],
+    [
+      "internet_yes",
+      0.020735247058571146
+    ],
+    [
+      "sex_M",
+      0.020349268935528624
+    ],
+    [
+      "schoolsup_yes",
+      0.019203472352698384
+    ],
+    [
+      "paid_yes",
+      0.0019692292332889856
+    ]
+  ],
+  "classBalanceDerivedBinary": {
+    "positive": 244,
+    "negative": 210,
+    "ratio": 1.161904761904762
+  },
+  "limitations": [
+    "Low validation R\u00b2 (0.30) \u2014 the model explains little of the variance in real outcomes; do not treat predictions as reliable.",
+    "No PeerReview-sourced labels present \u2014 training relied entirely on the weaker submission-verdict fallback signal."
+  ],
+  "datasetVersion": "2026-08-20T06:28:12.107Z",
+  "datasetSource": "UCI Student Performance (Portuguese course) \u2014 student-por.csv",
+  "datasetScopeNote": "Native UCI schema. NOT mapped to TeamSync's MongoDB-derived STUDENT_FEATURE_COLUMNS \u2014 no genuine field-level correspondence exists between platform telemetry and this survey/demographic dataset. This is a separate, independently-scoped grade-prediction exercise, not a TeamSync collaboration-performance predictor.",
+  "notIntegrated": "Not connected to the Flask API or the rule-based prediction system. Training artifact only."
+}
