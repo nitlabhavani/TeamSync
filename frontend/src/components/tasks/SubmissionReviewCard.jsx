@@ -135,10 +135,12 @@ const SubmissionReviewCard = ({ analysis }) => {
       </div>
 
       {analysis.completedParts?.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-slate-ink">Completed</p>
-          <ul className="mt-0.5 list-disc list-inside text-[11px] text-slate-muted">
-            {analysis.completedParts.slice(0, 6).map((p, i) => (
+        <div className="rounded-md border border-mint/30 bg-mint/10 p-2 space-y-1">
+          <p className="text-[11px] font-semibold text-mint flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> ✅ What matched in your ZIP folder:
+          </p>
+          <ul className="list-disc list-inside text-[11px] text-slate-ink space-y-0.5">
+            {analysis.completedParts.slice(0, 8).map((p, i) => (
               <li key={i}>{p}</li>
             ))}
           </ul>
@@ -146,10 +148,12 @@ const SubmissionReviewCard = ({ analysis }) => {
       )}
 
       {analysis.missingParts?.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-slate-ink">Missing</p>
-          <ul className="mt-0.5 list-disc list-inside text-[11px] text-slate-muted">
-            {analysis.missingParts.slice(0, 6).map((p, i) => (
+        <div className="rounded-md border border-coral/30 bg-coral-soft/60 p-2 space-y-1">
+          <p className="text-[11px] font-semibold text-coral flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> ⚠️ What is missing in your ZIP folder:
+          </p>
+          <ul className="list-disc list-inside text-[11px] text-slate-ink space-y-0.5">
+            {analysis.missingParts.slice(0, 8).map((p, i) => (
               <li key={i}>{p}</li>
             ))}
           </ul>
@@ -157,9 +161,11 @@ const SubmissionReviewCard = ({ analysis }) => {
       )}
 
       {analysis.suggestions?.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-slate-ink">AI Suggestions</p>
-          <ul className="mt-0.5 list-disc list-inside text-[11px] text-slate-muted">
+        <div className="rounded-md border border-brand/25 bg-brand-soft/70 p-2 space-y-1">
+          <p className="text-[11px] font-semibold text-brand flex items-center gap-1">
+            <Sparkles className="w-3 h-3" /> 💡 What you should do next (In simple words):
+          </p>
+          <ul className="list-decimal list-inside text-[11px] text-slate-ink space-y-1">
             {analysis.suggestions.slice(0, 6).map((s, i) => (
               <li key={i}>{s}</li>
             ))}
@@ -168,21 +174,18 @@ const SubmissionReviewCard = ({ analysis }) => {
       )}
 
       {analysis.implementationStatus === "WRONG_PROJECT" && (
-        <div className="text-[11px] space-y-1">
-          <p className="text-coral font-medium">
-            Your task remains In Progress. Please upload the correct TeamSync AI project ZIP and try again.
+        <div className="rounded-md border border-coral/30 bg-coral-soft p-2.5 text-[11px] space-y-1.5">
+          <p className="text-coral font-bold flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" /> Please check your files and redo the submission:
           </p>
-          <div>
-            <p className="font-medium text-slate-ink">Before resubmitting</p>
-            <ul className="mt-0.5 list-disc list-inside text-slate-muted">
-              <li>Make sure you selected the correct TeamSync AI project folder.</li>
-              <li>Do not upload an unrelated project.</li>
-              <li>Create the ZIP from the correct project root.</li>
-              <li>Upload the corrected ZIP.</li>
-            </ul>
-          </div>
+          <ul className="list-disc list-inside text-slate-ink space-y-0.5">
+            <li>Ensure you open the exact TeamSync project folder on your computer.</li>
+            <li>Verify you have your source code inside before creating the .zip archive.</li>
+            <li>Compress into a new .zip folder and upload again.</li>
+          </ul>
         </div>
       )}
+
 
       {analysis.implementationStatus === "UNREADABLE_ZIP" && (
         <div className="text-[11px]">

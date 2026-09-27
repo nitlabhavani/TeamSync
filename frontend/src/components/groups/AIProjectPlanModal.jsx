@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   User,
   Calendar,
+  Clock,
 } from "lucide-react";
 import * as projectPlanService from "../../services/projectPlanService";
 
@@ -133,15 +134,21 @@ const AIProjectPlanModal = ({ open, onClose, group, onTasksCreated }) => {
     }));
   };
 
+  const groupId = group?.id || group?._id || group?._doc?._id;
+
   const generate = async () => {
     if (!projectTitle.trim()) {
       setError("Please provide a project title for the AI to analyze.");
       return;
     }
+    if (!groupId) {
+      setError("Group identifier missing. Please refresh the page and try again.");
+      return;
+    }
     setError("");
     setStep("loading");
     try {
-      const data = await projectPlanService.generateProjectPlan(group.id, {
+      const data = await projectPlanService.generateProjectPlan(groupId, {
         projectTitle: projectTitle.trim(),
         projectDescription: projectDescription.trim(),
         deadline: deadline || null,
@@ -209,6 +216,10 @@ const AIProjectPlanModal = ({ open, onClose, group, onTasksCreated }) => {
   };
 
   const createTasks = async () => {
+    if (!groupId) {
+      setError("Group identifier missing. Please refresh the page and try again.");
+      return;
+    }
     setError("");
     setStep("creating");
     try {
@@ -225,7 +236,7 @@ const AIProjectPlanModal = ({ open, onClose, group, onTasksCreated }) => {
         };
       });
 
-      const data = await projectPlanService.createTasksFromPlan(group.id, {
+      const data = await projectPlanService.createTasksFromPlan(groupId, {
         ...plan,
         tasks: mergedTasks,
       });
@@ -244,8 +255,8 @@ const AIProjectPlanModal = ({ open, onClose, group, onTasksCreated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-ink/40 p-0 sm:p-6">
-      <div className="bg-paper w-full sm:max-w-2xl rounded-t-2xl sm:rounded-xl2 border border-slate-line max-h-[92vh] flex flex-col overflow-hidden shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-6 animate-fadeIn">
+      <div className="bg-paper/95 dark:bg-[#131722]/95 backdrop-blur-xl w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl border border-slate-line/80 dark:border-white/10 max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-line shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="w-9 h-9 rounded-full bg-brand-soft flex items-center justify-center shrink-0">

@@ -133,3 +133,9 @@ export const updateMilestone = async (groupId, milestoneId, payload) =>
 
 export const deleteMilestone = async (groupId, milestoneId) =>
   api.del(`/groups/${groupId}/milestones/${milestoneId}`);
+
+export const assembleFinalArchive = async (groupId) => {
+  const res = await api.postRaw(`/groups/${groupId}/final-archive`);
+  return res.data;
+};
+

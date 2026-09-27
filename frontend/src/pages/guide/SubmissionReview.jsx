@@ -9,6 +9,8 @@ import {
   Sparkles,
   Users,
   Clock,
+  Download,
+  FolderArchive,
 } from "lucide-react";
 import Navbar from "../../components/navbar/Navbar";
 import SubmissionFeedbackPanel from "../../components/tasks/SubmissionFeedbackPanel";
@@ -16,10 +18,17 @@ import { HistoryRow } from "../../components/tasks/SubmissionHistoryPanel";
 import { useGroups } from "../../hooks/useGroups";
 import { nameOf as dirName } from "../../services/userDirectory";
 import { formatDay, formatTime } from "../../utils/dateFormatter";
+import { api, SERVER_URL } from "../../lib/apiClient";
 import * as taskService from "../../services/taskService";
 import * as teamRiskService from "../../services/teamRiskService";
 
 const nameOf = (id) => dirName(id, "Unknown student");
+
+const formatFileSize = (bytes) => {
+  if (!bytes && bytes !== 0) return "0 B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+};
 
 /**
  * The tabs mirror the Step 11 §2 status set, scoped to what a guide
@@ -69,7 +78,7 @@ const SubmissionRow = ({ row, onReview, busy }) => {
   const [open, setOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [localError, setLocalError] = useState("");
-  const needsReview = task.status === "guide_review";
+  const needsReview = ["guide_review", "in_review", "submitted", "ai_review", "review"].includes(task.status);
   const studentId = submission.student?.id || submission.student;
   const studentName = submission.student?.name || nameOf(studentId);
 
@@ -174,8 +183,51 @@ const SubmissionRow = ({ row, onReview, busy }) => {
       )}
 
       {submission.note && <p className="mt-2 text-xs text-slate-muted italic">"{submission.note}"</p>}
+      
+      {/* Student Attached ZIP Submissions with Direct Download */}
       {submission.files?.length > 0 && (
-        <p className="mt-1 text-[11px] text-slate-muted">{submission.files.length} file(s) attached</p>
+        <div className="mt-2.5 space-y-2 rounded-xl border border-slate-line bg-paper p-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-ink flex items-center gap-1.5">
+              <FolderArchive className="w-4 h-4 text-brand" /> Submitted ZIP & Project Files
+            </span>
+            <span className="text-[11px] text-slate-muted font-medium">{submission.files.length} file(s) attached</span>
+          </div>
+          <div className="space-y-1.5 pt-0.5">
+            {submission.files.map((file, idx) => {
+              const fileUrl = file.url ? (file.url.startsWith("http") ? file.url : `${SERVER_URL}${file.url}`) : "#";
+              return (
+                <div
+                  key={file._id || file.id || idx}
+                  className="flex items-center justify-between gap-3 p-2 rounded-lg border border-brand/20 bg-cloud/50 hover:bg-brand-soft/20 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center shrink-0">
+                      <FolderArchive className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-ink truncate" title={file.name}>
+                        {file.name || "Student Submission Archive"}
+                      </p>
+                      <p className="text-[10px] text-slate-muted">
+                        {file.size ? formatFileSize(file.size) : "ZIP Package"}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={fileUrl}
+                    download={file.name || "submission.zip"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-medium hover:bg-brand-deep transition-colors shadow-sm shrink-0"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download ZIP
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {submission.verdict && (
@@ -282,6 +334,7 @@ const SubmissionReview = () => {
   const [tab, setTab] = useState("guide_review");
   const [busyTaskId, setBusyTaskId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   // Step 15, Feature 14 — taskId -> short reason string, sourced from the
   // same team-risk evidence used on the Guide Dashboard/Team Analytics.
   const [riskyTaskReasons, setRiskyTaskReasons] = useState({});
@@ -356,15 +409,41 @@ const SubmissionReview = () => {
     return out.sort((a, b) => new Date(b.submission.submittedAt) - new Date(a.submission.submittedAt));
   }, [groups, tasksByGroup, riskyTaskReasons]);
 
-  const filtered = tab === "all" ? rows : rows.filter((r) => r.task.status === tab);
-  const needsReviewCount = rows.filter((r) => r.task.status === "guide_review").length;
+  const filtered =
+    tab === "all"
+      ? rows
+      : tab === "guide_review"
+      ? rows.filter((r) => ["guide_review", "in_review", "submitted", "ai_review", "review"].includes(r.task.status))
+      : tab === "completed"
+      ? rows.filter((r) => r.task.status === "completed" || r.task.status === "done")
+      : rows.filter((r) => r.task.status === tab);
+
+  const countForTab = (tabId) => {
+    if (tabId === "all") return rows.length;
+    if (tabId === "guide_review") return rows.filter((r) => ["guide_review", "in_review", "submitted", "ai_review", "review"].includes(r.task.status)).length;
+    if (tabId === "completed") return rows.filter((r) => r.task.status === "completed" || r.task.status === "done").length;
+    return rows.filter((r) => r.task.status === tabId).length;
+  };
 
   const handleReview = async (row, verdict, feedback) => {
-    setBusyTaskId(row.task.id);
+    const taskId = row.task.id || row.task._id;
+    const groupId = row.groupId || row.task.groupId || row.task.group;
+    setBusyTaskId(taskId);
     setActionError("");
+    setSuccessMessage("");
     try {
-      await taskService.reviewTask(row.groupId, row.task.id, { verdict, feedback });
+      await taskService.reviewTask(groupId, taskId, { verdict, feedback });
       await load();
+      if (verdict === "approved") {
+        setSuccessMessage(`🎉 Task "${row.task.title}" has been approved and assigned to Completed!`);
+        setTab("completed");
+      } else if (verdict === "changes_requested") {
+        setSuccessMessage(`🔄 Changes requested for "${row.task.title}". The student has been notified.`);
+        setTab("changes_requested");
+      } else if (verdict === "rejected") {
+        setSuccessMessage(`❌ Submission for "${row.task.title}" was rejected. The student has been notified.`);
+        setTab("rejected");
+      }
     } catch (err) {
       setActionError(err.message || "Review failed.");
     } finally {
@@ -377,21 +456,47 @@ const SubmissionReview = () => {
       <Navbar title="Submission review" subtitle="AI-analyzed task submissions across your groups" />
       <main className="flex-1 px-5 md:px-8 py-6 space-y-5 max-w-4xl w-full mx-auto">
         <div className="flex flex-wrap gap-2">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                tab === t.id ? "bg-brand text-white" : "bg-cloud text-slate-muted hover:text-slate-ink"
-              }`}
-            >
-              {t.label}
-              {t.id === "guide_review" && needsReviewCount > 0 && (
-                <span className="ml-1.5 rounded-full bg-white/25 px-1.5 py-0.5 text-[10px]">{needsReviewCount}</span>
-              )}
-            </button>
-          ))}
+          {TABS.map((t) => {
+            const count = countForTab(t.id);
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all inline-flex items-center gap-1.5 ${
+                  tab === t.id
+                    ? "bg-brand text-white shadow-sm"
+                    : "bg-cloud text-slate-muted hover:text-slate-ink hover:bg-slate-line/50"
+                }`}
+              >
+                <span>{t.label}</span>
+                {count > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                      tab === t.id ? "bg-white/25 text-white" : "bg-paper text-slate-ink border border-slate-line"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {successMessage && (
+          <div className="flex items-center justify-between gap-2 rounded-xl2 border border-mint/30 bg-mint-soft px-4 py-3 text-sm text-mint">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+            <button
+              onClick={() => setSuccessMessage("")}
+              className="text-xs font-medium hover:underline text-mint/80"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {actionError && (
           <div className="flex items-center gap-2 rounded-xl2 border border-coral/30 bg-coral-soft px-4 py-3 text-sm text-coral">

@@ -25,6 +25,15 @@ app.use(cookieParser());
 app.use(compression());
 if (process.env.NODE_ENV !== "test") app.use(morgan("dev"));
 
+app.set("etag", false);
+
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+});
+
 app.use(
   "/api",
   rateLimit({

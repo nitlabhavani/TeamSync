@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@/lib/router-compat";
-import { User, Mail, Lock, GraduationCap, ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
+import {
+  User,
+  Mail,
+  Lock,
+  GraduationCap,
+  ArrowLeft,
+  ShieldCheck,
+  Loader2,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+} from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { ROUTES, ROLES } from "../../utils/constants";
 import { passwordStrength } from "../../utils/validators";
@@ -43,7 +54,7 @@ const Signup = () => {
     if (form.password.length < 8) return setError("Password must be at least 8 characters.");
     setLoading(true);
     try {
-      const result = await signup(form);
+      await signup(form);
       setCooldown(RESEND_SECONDS);
       setStep("otp");
     } catch (err) {
@@ -59,10 +70,6 @@ const Signup = () => {
     setLoading(true);
     try {
       const user = await completeSignup({ email: form.email, otp });
-      // Registering with an invited email auto-joins any pending group
-      // invitations for that address (see acceptPendingInvitations on the
-      // backend) — send them straight to their new team instead of an
-      // empty dashboard, and honor an invitation-page redirect if present.
       const resume = authService.consumePostLoginRedirect();
       if (resume) {
         navigate(resume);
@@ -86,7 +93,7 @@ const Signup = () => {
     setError("");
     setNotice("");
     try {
-      const result = await authService.resendSignupOtp({ email: form.email });
+      await authService.resendSignupOtp({ email: form.email });
       setCooldown(RESEND_SECONDS);
       setNotice("A new code is on its way.");
     } catch (err) {
@@ -104,51 +111,63 @@ const Signup = () => {
 
   if (step === "otp") {
     return (
-      <div>
+      <div className="space-y-6">
         <button
           type="button"
           onClick={startOver}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-muted hover:text-slate-ink mb-6"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-muted hover:text-brand transition-colors"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Change details
+          <ArrowLeft className="w-4 h-4" /> Edit account details
         </button>
 
-        <span className="inline-flex w-11 h-11 rounded-xl2 bg-brand-soft items-center justify-center mb-5">
-          <ShieldCheck className="w-5 h-5 text-brand" strokeWidth={2.5} />
-        </span>
-        <span className="inline-flex items-center gap-1.5 bg-brand-soft text-brand-deep text-xs font-semibold px-2.5 py-1 rounded-full mb-4">
-          <ShieldCheck className="w-3.5 h-3.5" /> Step 2 of 2
-        </span>
-        <h2 className="font-display text-2xl font-semibold text-slate-ink mb-1.5">Verify your email</h2>
-        <p className="text-sm text-slate-muted mb-8">
-          We sent a 6-digit code to <span className="font-medium text-slate-ink">{form.email}</span>.
-          Your account is created once it's verified.
-        </p>
+        <div>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-mint/15 px-2.5 py-1 text-xs font-semibold text-mint mb-3">
+            <ShieldCheck className="w-3.5 h-3.5" /> Step 2 of 2: Verification
+          </div>
+          <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-ink tracking-tight">
+            Verify your email
+          </h2>
+          <p className="text-sm text-slate-muted mt-1">
+            We sent a 6-digit OTP code to <strong className="text-slate-ink font-mono">{form.email}</strong>.
+          </p>
+        </div>
 
-        <form onSubmit={verify}>
+        <form onSubmit={verify} className="space-y-5">
           <OtpInput value={otp} onChange={setOtp} disabled={loading} />
 
-          {notice && <p className="text-xs text-mint bg-mint-soft rounded-lg px-3 py-2 mt-3 animate-fade-up">{notice}</p>}
-          {error && <p className="text-xs text-coral bg-coral-soft rounded-lg px-3 py-2 mt-3 animate-fade-up">{error}</p>}
+          {notice && (
+            <div className="text-xs text-mint font-medium bg-mint/10 border border-mint/30 rounded-xl p-3 animate-fade-up flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" /> {notice}
+            </div>
+          )}
+
+          {error && (
+            <div className="text-xs text-coral font-medium bg-coral-soft/80 border border-coral/30 rounded-xl p-3 animate-fade-up">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading || otp.length !== 6}
-            className="btn-premium w-full mt-6 bg-brand hover:bg-brand-deep disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none text-white text-sm font-semibold py-3 rounded-lg inline-flex items-center justify-center gap-2"
+            className="relative group overflow-hidden rounded-xl bg-gradient-to-r from-brand via-purple-600 to-indigo-600 w-full py-3.5 text-sm font-bold text-white shadow-lg shadow-brand/25 transition-all hover:shadow-brand/40 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? "Creating account…" : "Verify & create account"}
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {loading ? "Activating account…" : "Verify OTP & Activate Account"}
+            </span>
+            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           </button>
 
-          <p className="text-center text-xs text-slate-muted mt-4">
-            Didn't get a code?{" "}
+          <p className="text-center text-xs text-slate-muted">
+            Didn't receive the code?{" "}
             <button
               type="button"
               onClick={resend}
               disabled={cooldown > 0}
-              className="text-brand font-semibold hover:underline disabled:text-slate-muted disabled:no-underline"
+              className="text-brand font-bold hover:underline disabled:text-slate-muted disabled:no-underline ml-1"
             >
-              {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+              {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}
             </button>
           </p>
         </form>
@@ -157,71 +176,81 @@ const Signup = () => {
   }
 
   return (
-    <div>
-      <span className="inline-flex w-11 h-11 rounded-xl2 bg-brand-soft items-center justify-center mb-5">
-        <User className="w-5 h-5 text-brand" strokeWidth={2.5} />
-      </span>
-      <span className="inline-flex items-center gap-1.5 bg-cloud text-slate-muted text-xs font-semibold px-2.5 py-1 rounded-full mb-4">
-        Step 1 of 2
-      </span>
-      <h2 className="font-display text-2xl font-semibold text-slate-ink mb-1.5">Create your account</h2>
-      <p className="text-sm text-slate-muted mb-8">
-        We'll email you a verification code to confirm it's really you.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand mb-3">
+          <Sparkles className="w-3.5 h-3.5" /> Instant Team Workspace
+        </div>
+        <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-ink tracking-tight">
+          Create your account
+        </h2>
+        <p className="text-sm text-slate-muted mt-1">
+          Join your team workspace and access automated project tools.
+        </p>
+      </div>
 
       <form onSubmit={requestOtp} className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          {[ROLES.STUDENT, ROLES.GUIDE].map((role) => (
+        {/* Role Selector Pills (Uiverse style) */}
+        <div className="grid grid-cols-2 gap-2.5 p-1 rounded-xl bg-cloud/70 border border-slate-line/80">
+          {[
+            { id: ROLES.STUDENT, label: "Student Team", icon: GraduationCap },
+            { id: ROLES.GUIDE, label: "Guide / Faculty", icon: User },
+          ].map(({ id, label, icon: Icon }) => (
             <button
               type="button"
-              key={role}
-              onClick={() => setForm({ ...form, role })}
-              className={`flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded-lg border transition-all ${
-                form.role === role
-                  ? "bg-brand-soft border-brand text-brand-deep shadow-sm"
-                  : "border-slate-line text-slate-muted hover:border-slate-ink/30"
+              key={id}
+              onClick={() => setForm({ ...form, role: id })}
+              className={`flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-lg transition-all ${
+                form.role === id
+                  ? "bg-white text-brand shadow-sm border border-brand/20 dark:bg-slate-800"
+                  : "text-slate-muted hover:text-slate-ink"
               }`}
             >
-              <GraduationCap className="w-4 h-4" />
-              {role === ROLES.STUDENT ? "I'm a student" : "I'm a guide"}
+              <Icon className="w-4 h-4" /> {label}
             </button>
           ))}
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-ink mb-1.5 block">Full name</label>
-          <div className="flex items-center gap-2 border border-slate-line bg-cloud/40 rounded-lg px-3.5 py-2.5 focus-within:border-brand focus-within:bg-paper focus-within:ring-4 focus-within:ring-brand/10 transition-all">
-            <User className="w-4 h-4 text-slate-muted" />
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+            Full Name
+          </label>
+          <div className="flex items-center gap-2.5 border border-slate-line/80 bg-cloud/50 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15 transition-all">
+            <User className="w-4 h-4 text-slate-muted shrink-0" />
             <input
               required
               minLength={2}
               placeholder="Aisha Verma"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent"
+              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
             />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-ink mb-1.5 block">Email</label>
-          <div className="flex items-center gap-2 border border-slate-line bg-cloud/40 rounded-lg px-3.5 py-2.5 focus-within:border-brand focus-within:bg-paper focus-within:ring-4 focus-within:ring-brand/10 transition-all">
-            <Mail className="w-4 h-4 text-slate-muted" />
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+            College / Institutional Email
+          </label>
+          <div className="flex items-center gap-2.5 border border-slate-line/80 bg-cloud/50 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15 transition-all">
+            <Mail className="w-4 h-4 text-slate-muted shrink-0" />
             <input
               type="email"
               required
               placeholder="you@college.edu"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent"
+              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
             />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-ink mb-1.5 block">Password</label>
-          <div className="flex items-center gap-2 border border-slate-line bg-cloud/40 rounded-lg px-3.5 py-2.5 focus-within:border-brand focus-within:bg-paper focus-within:ring-4 focus-within:ring-brand/10 transition-all">
-            <Lock className="w-4 h-4 text-slate-muted" />
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+            Password
+          </label>
+          <div className="flex items-center gap-2.5 border border-slate-line/80 bg-cloud/50 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15 transition-all">
+            <Lock className="w-4 h-4 text-slate-muted shrink-0" />
             <input
               type="password"
               required
@@ -229,39 +258,61 @@ const Signup = () => {
               placeholder="At least 8 characters"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent"
+              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
             />
           </div>
+
           {form.password && (
-            <div className="flex gap-1 mt-1.5">
-              {[0, 1, 2, 3].map((i) => (
-                <span
-                  key={i}
-                  className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i < strength.score ? "bg-mint" : "bg-slate-line"}`}
-                />
-              ))}
+            <div className="mt-2 space-y-1">
+              <div className="flex gap-1.5">
+                {[0, 1, 2, 3].map((i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+                      i < strength.score ? "bg-mint" : "bg-slate-line"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-muted text-right font-medium">
+                {strength.score >= 3 ? "Strong password" : "Add numbers & special characters"}
+              </p>
             </div>
           )}
         </div>
 
-        {error && <p className="text-xs text-coral bg-coral-soft rounded-lg px-3 py-2 animate-fade-up">{error}</p>}
+        {error && (
+          <div className="text-xs text-coral font-medium bg-coral-soft/80 border border-coral/30 rounded-xl p-3 animate-fade-up">
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={loading}
-          className="btn-premium w-full bg-brand hover:bg-brand-deep disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-none text-white text-sm font-semibold py-3 rounded-lg inline-flex items-center justify-center gap-2"
+          className="relative group overflow-hidden rounded-xl bg-gradient-to-r from-brand via-purple-600 to-indigo-600 w-full py-3.5 text-sm font-bold text-white shadow-lg shadow-brand/25 transition-all hover:shadow-brand/40 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 cursor-pointer"
         >
-          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          {loading ? "Sending code…" : "Send verification code"}
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Sending verification code…
+              </>
+            ) : (
+              <>
+                Send verification code <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
+          </span>
+          <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
         </button>
       </form>
 
-      <p className="text-sm text-slate-muted text-center mt-8">
+      <div className="pt-2 text-center text-xs text-slate-muted border-t border-slate-line/60">
         Already have an account?{" "}
-        <Link to={ROUTES.LOGIN} className="text-brand font-semibold hover:underline">
+        <Link to={ROUTES.LOGIN} className="text-brand font-bold hover:underline ml-1">
           Log in
         </Link>
-      </p>
+      </div>
     </div>
   );
 };

@@ -281,7 +281,7 @@ const StudentDashboard = () => {
       />
       <main className="flex-1 px-5 md:px-8 py-6 space-y-6 max-w-6xl w-full mx-auto">
         {/* Welcome & Quick Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-paper border border-slate-line rounded-xl2 p-5 shadow-panel">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-paper/85 backdrop-blur-md border border-slate-line/80 rounded-xl2 p-5 shadow-panel">
           <div>
             <h1 className="font-display text-lg sm:text-xl font-semibold text-slate-ink">
               {greeting}, {user?.name?.split(" ")[0] || "Student"}!
@@ -352,7 +352,7 @@ const StudentDashboard = () => {
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
             {/* Task progress */}
-            <section className="bg-paper border border-slate-line rounded-xl2 p-5 shadow-panel">
+            <section className="bg-paper/85 backdrop-blur-md border border-slate-line/80 rounded-xl2 p-5 shadow-panel">
               <div className="mb-3">
                 <SectionHeading icon={ListTodo} title="Task progress" />
               </div>
@@ -386,7 +386,7 @@ const StudentDashboard = () => {
             </section>
 
             {/* Upcoming deadlines */}
-            <section className="bg-paper border border-slate-line rounded-xl2 p-5 shadow-panel">
+            <section className="bg-paper/85 backdrop-blur-md border border-slate-line/80 rounded-xl2 p-5 shadow-panel">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <SectionHeading icon={CalendarClock} title="Upcoming deadlines" />
                 <button

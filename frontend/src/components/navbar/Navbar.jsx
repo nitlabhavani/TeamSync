@@ -15,7 +15,7 @@ const Navbar = ({ title, subtitle, onSearch, showSearch = false }) => {
   const { openMobile } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-line bg-paper/90 backdrop-blur px-4 py-3.5 md:px-8 md:gap-4">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-line/80 bg-paper/85 backdrop-blur-md px-4 py-3.5 md:px-8 md:gap-4 shadow-xs">
       <button
         onClick={openMobile}
         className="md:hidden shrink-0 w-9 h-9 rounded-lg hover:bg-cloud flex items-center justify-center transition-colors"

@@ -108,7 +108,7 @@ const urgencyAccent = (task) => {
   return accent || "before:bg-slate-line";
 };
 
-const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete, onSubmitted, onReviewed }) => {
+const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete, onSubmitted, onReviewed, onJumpToDetails }) => {
   const [expanded, setExpanded] = useState(false);
   const [note, setNote] = useState("");
   const [pickedFiles, setPickedFiles] = useState([]);
@@ -147,31 +147,24 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
   const isAssignee = String(task.assigneeId) === String(currentUser?.id);
   const isGuide = currentUser?.role === "guide";
   const isTeamLeader = !isGuide && leaderId != null && String(leaderId) === String(currentUser?.id);
-  // STEP 33 — defense in depth on top of the backend fix (see
-  // taskSubmissionScope.js): the server already never sends a student
-  // anyone else's submission, but a student viewing their OWN card must
-  // also never render a submission that doesn't belong to them (e.g. if
-  // this task was reassigned and stale client state still holds the
-  // previous assignee's data). Guides/team leaders reviewing a task still
-  // see the real latest submission regardless of who it belongs to — that
-  // is the whole point of guide review.
+
   const rawLatest = task.latestSubmission;
   const latestSubmissionStudentId = rawLatest?.student?.id ?? rawLatest?.student;
   const submission =
     isGuide || isTeamLeader || !rawLatest || String(latestSubmissionStudentId) === String(currentUser?.id)
       ? rawLatest
       : null;
-  const isQueued = task.status === "backlog" || task.isActiveTask === false;
+  const isQueued = task.status === "backlog";
   const statusBadge = isQueued
     ? { label: "⏳ Queued in Backlog", tone: "bg-slate-100 text-slate-600 border border-slate-200" }
     : (STATUS_BADGE[task.status] || STATUS_BADGE.todo);
-  const canSubmit = isAssignee && !isGuide && !["completed", "backlog"].includes(task.status) && task.isActiveTask !== false;
+  const canSubmit = isAssignee && !isGuide && !["completed", "done", "backlog"].includes(task.status);
   const canReview = (isGuide || isTeamLeader) && task.status === "guide_review";
 
   const handleSubmit = async (e, action = "submit_for_review") => {
     if (e?.preventDefault) e.preventDefault();
     if (!pickedFiles.length && !note.trim()) {
-      setSubmitError("Attach at least one file or add a note.");
+      setSubmitError("Attach a .zip archive or add a note.");
       return;
     }
     setSubmitting(true);
@@ -192,6 +185,10 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
       onSubmitted?.(updated);
       setNote("");
       setPickedFiles([]);
+      // Smoothly navigate to the AI Verification & Missing Requirements section below
+      setTimeout(() => {
+        onJumpToDetails?.(task.id);
+      }, 500);
     } catch (err) {
       setSubmitError(err.message || "Submission failed.");
     } finally {
@@ -201,8 +198,6 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
   };
 
   const handleReview = async (verdict) => {
-    // "Request Changes" and "Reject" both require the reviewer to explain
-    // why — mirrors the same requirement enforced server-side.
     if (verdict !== "approved" && !feedback.trim()) {
       setSubmitError(
         verdict === "rejected" ? "Please enter a reason before rejecting." : "Please enter feedback before requesting changes."
@@ -224,7 +219,7 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
 
   return (
     <article
-      className={`relative overflow-hidden rounded-xl2 border border-slate-line bg-paper p-3.5 pl-4 shadow-sm transition-shadow hover:shadow-panel before:absolute before:inset-y-0 before:left-0 before:w-1 before:content-[''] ${urgencyAccent(
+      className={`group relative overflow-hidden rounded-2xl border border-slate-line/80 dark:border-white/10 bg-paper/90 dark:bg-[#151926]/90 p-3.5 pl-4 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg before:absolute before:inset-y-0 before:left-0 before:w-1 before:content-[''] ${urgencyAccent(
         task
       )}`}
     >
@@ -263,79 +258,61 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
         {isQueued && (
           <div className="mt-2 rounded-lg bg-cloud/80 border border-slate-line/80 px-2.5 py-1.5 text-[11px] text-slate-600 flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span>Queued · Unlocks automatically after your active task is verified</span>
+            <span>Queued · Unlocks automatically after active task is verified</span>
           </div>
         )}
 
-        {/* Project Context & AI Task Clarity — clear title, description, deliverable, and criteria */}
-        {(task.projectContext?.title || task.projectTitle || task.description || task.whatToDo || task.expectedOutput) && (
-          <div className="mt-2.5 rounded-lg border border-brand/15 bg-brand-soft/30 p-2 text-xs space-y-1.5">
-            {(task.projectContext?.title || task.projectTitle) && (
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-semibold text-brand-deep text-[11px] truncate">
-                  📁 {task.projectContext?.title || task.projectTitle}
-                </span>
-                {task.due && (
-                  <span className="text-[10px] text-slate-muted font-medium shrink-0">
-                    Due: {formatDay(task.due)}{getDeadlineCountdown(task.due) ? ` · ${getDeadlineCountdown(task.due)}` : ""}
-                  </span>
-                )}
-              </div>
-            )}
-            {task.deliverableType && (
-              <div className="flex items-center gap-1 text-[10px]">
+        {/* Deliverable & Progress Stage */}
+        <div className="mt-2.5 rounded-lg border border-brand/15 bg-brand-soft/30 p-2 text-xs space-y-1.5">
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center gap-1 text-[10px]">
+              {task.deliverableType && (
                 <span className="rounded bg-brand/10 text-brand font-semibold px-1.5 py-0.5 uppercase">
                   📦 {task.deliverableType}
                 </span>
-                {task.verifiedBy && (
-                  <span className="rounded bg-mint/15 text-mint font-semibold px-1.5 py-0.5">
-                    ✓ Verified by {task.verifiedBy}
-                  </span>
-                )}
-              </div>
-            )}
-            {(task.whatToDo || task.description) && (
-              <p className="text-[11px] text-slate-ink pt-0.5 line-clamp-3">
-                <span className="font-medium text-slate-muted">What to do: </span>
-                {task.whatToDo || task.description}
-              </p>
-            )}
-            {task.expectedOutput && (
-              <p className="text-[10px] text-slate-muted line-clamp-2">
-                <span className="font-medium text-slate-ink">Deliverable: </span>
-                {task.expectedOutput}
-              </p>
-            )}
-            {/* Progress Stage Bar (0%, 10%, 90%, 100%) */}
-            <div className="pt-1">
-              <div className="flex items-center justify-between text-[10px] font-medium text-slate-muted mb-1">
-                <span>Progress: {task.progress ?? (task.status === "completed" || task.status === "done" ? 100 : task.status === "in_review" || task.status === "review" ? 90 : task.status === "in_progress" ? 10 : 0)}%</span>
-                <span className="text-brand font-semibold">
-                  {task.progress === 100 || task.status === "completed" || task.status === "done"
-                    ? "Done (100%)"
-                    : task.progress === 90 || task.status === "in_review" || task.status === "review"
-                    ? "In Review (90%)"
-                    : task.progress === 10 || task.status === "in_progress"
-                    ? "In Progress (10%)"
-                    : "Not Started (0%)"}
+              )}
+              {task.verifiedBy && (
+                <span className="rounded bg-mint/15 text-mint font-semibold px-1.5 py-0.5">
+                  ✓ Verified by {task.verifiedBy}
                 </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-line/50 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ${
-                    task.progress === 100 || task.status === "completed" || task.status === "done"
-                      ? "bg-mint w-full"
-                      : task.progress === 90 || task.status === "in_review" || task.status === "review"
-                      ? "bg-amber w-[90%]"
-                      : task.progress === 10 || task.status === "in_progress"
-                      ? "bg-brand w-[10%]"
-                      : "bg-slate-muted/20 w-0"
-                  }`}
-                />
-              </div>
+              )}
+            </div>
+            {task.due && (
+              <span className="text-[10px] text-slate-muted font-medium shrink-0">
+                Due: {formatDay(task.due)}
+              </span>
+            )}
+          </div>
+
+          {/* Progress Stage Bar */}
+          <div className="pt-0.5">
+            <div className="flex items-center justify-between text-[10px] font-medium text-slate-muted mb-1">
+              <span>Progress: {task.progress ?? (task.status === "completed" || task.status === "done" ? 100 : task.status === "in_review" || task.status === "review" ? 90 : task.status === "in_progress" ? 10 : 0)}%</span>
+              <span className="text-brand font-semibold">
+                {task.progress === 100 || task.status === "completed" || task.status === "done"
+                  ? "Done (100%)"
+                  : task.progress === 90 || task.status === "in_review" || task.status === "review"
+                  ? "In Review (90%)"
+                  : task.progress === 10 || task.status === "in_progress"
+                  ? "In Progress (10%)"
+                  : "Not Started (0%)"}
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-slate-line/50 overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 ${
+                  task.progress === 100 || task.status === "completed" || task.status === "done"
+                    ? "bg-mint w-full"
+                    : task.progress === 90 || task.status === "in_review" || task.status === "review"
+                    ? "bg-amber w-[90%]"
+                    : task.progress === 10 || task.status === "in_progress"
+                    ? "bg-brand w-[10%]"
+                    : "bg-slate-muted/20 w-0"
+                }`}
+              />
             </div>
           </div>
-        )}
+        </div>
 
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -351,127 +328,63 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
         </div>
       </div>
 
-      {(canSubmit || canReview || submission || task.aiPlan?.subtasks?.length > 0) && (
+      {(canSubmit || canReview || submission) && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="mt-2.5 w-full flex items-center justify-center gap-1 text-xs font-medium text-brand border-t border-slate-line pt-2.5 hover:text-brand-deep transition-colors"
         >
-          {expanded ? "Hide details" : canReview ? "Review submission" : canSubmit ? "Submit work" : "View submission"}
+          {expanded ? "Hide submission box" : canReview ? "Review submission" : canSubmit ? "Submit ZIP Archive" : "View submission status"}
           {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
       )}
 
       {expanded && (
-        <div className="mt-2 space-y-3 text-xs">
-          {/* STEP 18 — AI Task Intelligence / Smart Planning. Only the
-              student-safe subset (subtasks/acceptance criteria/testing
-              checklist/estimated effort) ever reaches the task, so this is
-              safe to show to guide and student alike — no internal AI
-              reasoning or team-risk data is ever stored here. */}
-          {task.aiPlan?.subtasks?.length > 0 && (
-            <div className="rounded-lg bg-cloud/70 p-2.5 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-slate-ink">📋 Task Plan</p>
-                {task.aiPlan.estimatedTotalEffort && (
-                  <span className="text-[11px] text-slate-muted">{task.aiPlan.estimatedTotalEffort}</span>
-                )}
-              </div>
-              <ol className="list-decimal list-inside space-y-0.5 text-slate-ink">
-                {task.aiPlan.subtasks.map((s, i) => (
-                  <li key={i}>
-                    {s.title} <span className="text-slate-muted">({s.difficulty}{s.estimatedHours ? `, ~${s.estimatedHours}h` : ""})</span>
-                  </li>
-                ))}
-              </ol>
-              {task.aiPlan.acceptanceCriteria?.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-medium text-slate-muted">Acceptance criteria</p>
-                  <ul className="list-disc list-inside text-slate-muted">
-                    {task.aiPlan.acceptanceCriteria.map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {task.aiPlan.testingChecklist?.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-medium text-slate-muted">Testing checklist</p>
-                  <ul className="list-disc list-inside text-slate-muted">
-                    {task.aiPlan.testingChecklist.map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
+        <div className="mt-2.5 space-y-3 text-xs">
+          {/* If already submitted: show concise status banner + jump button */}
           {submission && (
-            <div className="rounded-lg bg-cloud/70 p-2.5 space-y-1.5">
-              <p className="text-[11px] font-semibold text-slate-ink">Latest Submission — Version {submission.version}</p>
-              <p className="text-slate-muted">
-                Uploaded {formatDay(submission.submittedAt)} · {formatTime(submission.submittedAt)} by{" "}
-                {nameOf(submission.student?.id || submission.student)}
-                {submission.note ? `: "${submission.note}"` : ""}
+            <div className="rounded-xl border border-slate-line/80 bg-cloud/50 p-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-ink">
+                  Latest Submission (v{submission.version})
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  submission.verdict === "approved" || task.status === "completed"
+                    ? "bg-mint/15 text-mint"
+                    : submission.verdict === "changes_requested"
+                    ? "bg-coral/15 text-coral"
+                    : "bg-amber/15 text-amber"
+                }`}>
+                  {submission.verdict === "approved" || task.status === "completed"
+                    ? "Approved (100%)"
+                    : submission.verdict === "changes_requested"
+                    ? "Changes Requested"
+                    : "In Review (90%)"}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-muted">
+                Uploaded {formatDay(submission.submittedAt)} · {formatTime(submission.submittedAt)}
+                {submission.files?.length > 0 ? ` · ${submission.files.length} file(s) attached` : ""}
               </p>
-              {submission.files?.length > 0 && (
-                <p className="text-slate-muted">{submission.files.length} file(s) attached</p>
-              )}
 
-              {/* Safe ZIP Content Relevance Check — prominent non-accusatory warning banner */}
-              {submission.aiAnalysis?.relevance?.isIrrelevant && (
-                <div className="rounded-lg border border-coral/30 bg-coral-soft p-2.5 space-y-1.5 text-xs">
-                  <div className="flex items-start gap-1.5 text-coral font-semibold">
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>⚠️ Submission may be incorrect</span>
-                  </div>
-                  <p className="text-[11px] text-slate-ink font-normal">
-                    {submission.aiAnalysis.relevance.reason || "The uploaded ZIP does not appear to match your assigned task."}
-                  </p>
-                  {submission.aiAnalysis.relevance.evidence?.unmatchedReasons?.length > 0 && (
-                    <ul className="list-disc list-inside text-[10px] text-slate-muted space-y-0.5">
-                      {submission.aiAnalysis.relevance.evidence.unmatchedReasons.map((r, idx) => (
-                        <li key={idx}>{r}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <p className="text-[10px] text-slate-muted italic">
-                    Please review your files and ensure you are uploading the project archive that implements "{task.title}".
-                  </p>
-                </div>
-              )}
-
-              {/* Step 11 §8 — AI Analysis -> Guide Review -> Final Result. */}
-              {submission.verdict === "approved" && (
-                <p className="text-mint font-medium">🎉 Excellent job! Your task has been approved and completed.</p>
-              )}
-              {submission.verdict === "changes_requested" && (
-                <div className="text-coral font-medium space-y-1">
-                  <p>🔄 Changes requested</p>
-                  {submission.guideFeedback && (
-                    <p className="font-normal text-slate-ink">Guide feedback: "{submission.guideFeedback}"</p>
-                  )}
-                </div>
-              )}
-              {submission.verdict === "rejected" && (
-                <div className="text-coral font-medium space-y-1">
-                  <p>❌ Submission rejected</p>
-                  {submission.guideFeedback && (
-                    <p className="font-normal text-slate-ink">Reason: {submission.guideFeedback}</p>
-                  )}
-                </div>
-              )}
-              {submission.aiAnalysis && <SubmissionFeedbackPanel analysis={submission.aiAnalysis} submission={submission} task={task} />}
+              <button
+                type="button"
+                onClick={() => onJumpToDetails?.(task.id)}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-soft hover:bg-brand-soft/80 text-brand-deep border border-brand/20 py-1.5 text-xs font-semibold transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>View AI Instructions & Missing Files Below ↓</span>
+              </button>
             </div>
           )}
 
+          {/* Guide / Leader Review Controls */}
           {canReview && (
             <div className="space-y-1.5">
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Feedback for the student (required for Request Changes / Reject)"
+                placeholder="Feedback for student (required for Request Changes / Reject)"
                 rows={2}
                 className="w-full rounded-lg border border-slate-line bg-cloud px-2 py-1.5 text-xs outline-none focus:border-brand"
               />
@@ -504,33 +417,16 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
             </div>
           )}
 
+          {/* Student ZIP Submission Only Form */}
           {canSubmit && (
-            <form onSubmit={handleSubmit} className="space-y-1.5">
+            <form onSubmit={handleSubmit} className="space-y-2">
               {submitting ? (
                 <div className="flex items-center gap-2 rounded-lg bg-brand-soft px-3 py-2.5 text-xs font-medium text-brand">
                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                  {uploadPhase === "uploading" ? `Uploading… ${uploadPct}%` : "🔍 AI is analyzing your submission..."}
+                  {uploadPhase === "uploading" ? `Uploading… ${uploadPct}%` : "🔍 AI is analyzing your ZIP submission..."}
                 </div>
               ) : (
                 <>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Add a note about your submission (optional if attaching files)"
-                    rows={2}
-                    className="w-full rounded-lg border border-slate-line bg-cloud px-2 py-1.5 text-xs outline-none focus:border-brand"
-                  />
-                  {/* Step 35 — Guidance for ZIP Submission */}
-                  <div className="rounded-lg border border-brand/20 bg-brand-soft/40 p-2.5 space-y-1 text-xs">
-                    <p className="font-semibold text-brand-deep text-[11px] flex items-center gap-1">
-                      💡 Suggestions for Project Submission
-                    </p>
-                    <ul className="list-disc list-inside text-[10px] text-slate-muted space-y-0.5">
-                      <li>Upload a clean <span className="font-medium text-slate-ink">.zip</span> containing your task implementation.</li>
-                      <li>Include files implementing <span className="font-medium text-slate-ink">"{task.title}"</span>.</li>
-                      <li>Exclude <code className="bg-cloud px-1 rounded text-[10px]">node_modules</code>, <code className="bg-cloud px-1 rounded text-[10px]">.git</code>, and temporary cache folders.</li>
-                    </ul>
-                  </div>
                   <div
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -556,7 +452,7 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
                       }
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`cursor-pointer rounded-xl border-2 border-dashed p-3.5 text-center transition-all ${
+                    className={`cursor-pointer rounded-xl border-2 border-dashed p-3 text-center transition-all ${
                       isDraggingZip
                         ? "border-brand bg-brand-soft/70 scale-[1.01]"
                         : "border-slate-line/80 bg-cloud/50 hover:bg-cloud/80 hover:border-brand/40"
@@ -573,87 +469,92 @@ const TaskCard = ({ task, currentUser, groupId, leaderId, onDragStart, onDelete,
                       }}
                       className="hidden"
                     />
-                    <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
-                      <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand">
-                        <FolderArchive className="w-4 h-4" />
+                    <div className="flex flex-col items-center justify-center gap-1 pointer-events-none">
+                      <div className="w-7 h-7 rounded-full bg-brand/10 flex items-center justify-center text-brand">
+                        <FolderArchive className="w-3.5 h-3.5" />
                       </div>
                       <p className="text-xs font-medium text-slate-ink">
-                        Drag & drop your <span className="font-semibold text-brand">.zip</span> archive here or <span className="text-brand underline">browse</span>
+                        Drag & drop <span className="font-semibold text-brand">.zip</span> or <span className="text-brand underline">browse</span>
                       </p>
                       <p className="text-[10px] text-slate-muted">
-                        Only ZIP files allowed · Max size: {taskService.MAX_UPLOAD_MB}MB
+                        Max size: {taskService.MAX_UPLOAD_MB}MB
                       </p>
                     </div>
                   </div>
 
                   {pickedFiles.length > 0 && (
-                    <div className="space-y-1.5 pt-1">
-                      <p className="text-[11px] font-medium text-slate-muted">
-                        Attached ZIP ({pickedFiles.length}):
-                      </p>
-                      <div className="space-y-1">
-                        {pickedFiles.map((file, idx) => (
-                          <div
-                            key={`${file.name}-${idx}`}
-                            className="flex items-center justify-between gap-2 rounded-lg border border-brand/20 bg-paper px-2.5 py-1.5 text-xs shadow-xs"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FolderArchive className="w-4 h-4 text-brand shrink-0" />
-                              <span className="font-medium text-slate-ink truncate" title={file.name}>
-                                {file.name}
-                              </span>
-                              <span className="text-[10px] text-slate-muted shrink-0 font-mono">
-                                ({formatFileSize(file.size)})
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removePickedFile(idx);
-                              }}
-                              className="p-1 rounded text-slate-muted hover:text-coral hover:bg-coral-soft transition-colors shrink-0"
-                              title="Remove file"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                    <div className="space-y-1">
+                      {pickedFiles.map((file, idx) => (
+                        <div
+                          key={`${file.name}-${idx}`}
+                          className="flex items-center justify-between gap-2 rounded-lg border border-brand/20 bg-paper px-2.5 py-1.5 text-xs shadow-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FolderArchive className="w-3.5 h-3.5 text-brand shrink-0" />
+                            <span className="font-medium text-slate-ink truncate" title={file.name}>
+                              {file.name}
+                            </span>
+                            <span className="text-[10px] text-slate-muted shrink-0 font-mono">
+                              ({formatFileSize(file.size)})
+                            </span>
                           </div>
-                        ))}
-                      </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removePickedFile(idx);
+                            }}
+                            className="p-1 rounded text-slate-muted hover:text-coral hover:bg-coral-soft transition-colors shrink-0"
+                            title="Remove file"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Note (optional)"
+                    className="w-full rounded-lg border border-slate-line bg-cloud px-2.5 py-1.5 text-xs outline-none focus:border-brand"
+                  />
+
+                  <div className="flex flex-col sm:flex-row gap-2 pt-0.5">
                     <button
                       type="button"
                       disabled={submitting}
                       onClick={(e) => handleSubmit(e, "upload_only")}
                       className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-slate-line bg-paper px-2 py-1.5 text-xs font-medium text-slate-ink hover:bg-cloud disabled:opacity-60 transition-colors"
-                      title="Upload files as evidence without moving task to In Review"
+                      title="Upload ZIP as evidence"
                     >
                       <Upload className="w-3 h-3 text-slate-muted" />
-                      Save Evidence Only
+                      Save Evidence
                     </button>
                     <button
                       type="button"
                       disabled={submitting}
                       onClick={(e) => handleSubmit(e, "submit_for_review")}
                       className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-brand px-2 py-1.5 text-xs font-medium text-white hover:bg-brand-deep disabled:opacity-60 transition-colors shadow-sm"
-                      title="Submit work for AI & guide review (moves to 90% In Review)"
+                      title="Submit ZIP for AI & guide review"
                     >
                       <CheckCircle2 className="w-3 h-3" />
-                      Submit for Review
+                      Submit ZIP
                     </button>
                   </div>
+
+                  {/* Informational hint pointing to inspection section below */}
+                  <p className="text-[10px] text-slate-muted text-center pt-1">
+                    AI verification, missing files checklist & instructions are detailed below ↓
+                  </p>
                 </>
               )}
             </form>
           )}
 
-          {submitError && <p className="text-coral">{submitError}</p>}
-
-          {/* Step 12 — Submission History + AI Improvement Suggestions,
-              placed under the Submit Your File section per spec §1. */}
-          {task.submissions?.length > 0 && <SubmissionHistoryPanel submissions={task.submissions} />}
+          {submitError && <p className="text-coral text-xs">{submitError}</p>}
         </div>
       )}
     </article>
@@ -793,6 +694,29 @@ const Tasks = () => {
       return true;
     });
   }, [tasks, search, priorityFilter, statusFilter, user]);
+
+  // Tasks to show in the detailed AI inspection section below the board
+  const detailedInspectionTasks = useMemo(() => {
+    const currentUserId = String(user?.id || user?._id || "");
+    return tasks.filter((t) => {
+      if (user?.role === "student") {
+        const assigneeId = String(t.assignee?.id || t.assignee?._id || t.assignee || t.assigneeId || "");
+        if (assigneeId && currentUserId && assigneeId !== currentUserId) return false;
+      }
+      return true;
+    });
+  }, [tasks, user]);
+
+  const scrollToTaskDetail = (taskId) => {
+    const el = document.getElementById(`task-detail-${taskId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-2", "ring-brand", "ring-offset-2");
+      setTimeout(() => {
+        el.classList.remove("ring-2", "ring-brand", "ring-offset-2");
+      }, 2500);
+    }
+  };
 
   // Tasks with submissions that this user is authorized to review/view
   const myReviewTasks = useMemo(() => {
@@ -1032,7 +956,7 @@ const Tasks = () => {
             </div>
 
             {/* Filter toolbar */}
-            <div className="flex flex-wrap items-center gap-2.5 rounded-xl2 border border-slate-line bg-paper p-3 shadow-panel">
+            <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-line/80 dark:border-white/10 bg-paper/85 dark:bg-[#151926]/85 p-3 shadow-panel backdrop-blur-md">
               <div className="flex items-center gap-2 bg-cloud rounded-full px-3.5 py-2 flex-1 min-w-[180px]">
                 <Search className="w-4 h-4 text-slate-muted shrink-0" />
                 <input
@@ -1496,6 +1420,7 @@ const Tasks = () => {
                                   leaderId={group?.leaderId}
                                   onDragStart={handleDragStart}
                                   onDelete={handleDelete}
+                                  onJumpToDetails={scrollToTaskDetail}
                                   onSubmitted={(updated) => {
                                     setTasks((prev) => prev.map((x) => ((x.id === updated.id || x._id === updated.id || x.id === updated._id || x._id === updated._id) ? { ...x, ...updated } : x)));
                                     loadTasks();
@@ -1617,8 +1542,8 @@ const Tasks = () => {
                   )}
                 </div>
 
-              {/* Full-width AI Review, Suggestions & Alerts Section */}
-              <section className="rounded-2xl border border-slate-line bg-paper p-6 shadow-panel space-y-6">
+              {/* Full-width AI Task Verification, Missing Requirements & Instructions Section */}
+              <section id="ai-inspection-section" className="rounded-2xl border border-slate-line bg-paper p-6 shadow-panel space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-slate-line">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
@@ -1626,13 +1551,13 @@ const Tasks = () => {
                     </div>
                     <div>
                       <h2 className="text-base font-bold text-slate-ink flex items-center gap-2">
-                        AI Review, Suggestions & Alerts
+                        AI Task Verification, Missing Requirements & Instructions
                         <span className="text-[11px] font-semibold bg-brand/10 text-brand px-2.5 py-0.5 rounded-full border border-brand/20">
-                          Continuous Inspection
+                          Inspection & Feedback
                         </span>
                       </h2>
                       <p className="text-xs text-slate-muted">
-                        Real-time AI verification results, matched repository evidence, criteria evaluation, and code quality recommendations.
+                        All AI task instructions, required deliverable files, automated verification reports, missing requirements, and code quality reviews.
                       </p>
                     </div>
                   </div>
@@ -1641,193 +1566,219 @@ const Tasks = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-mint-soft text-mint border border-mint/20">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      {myReviewTasks.filter((t) => t.status === "completed" || t.status === "done").length} Verified (100%)
+                      {detailedInspectionTasks.filter((t) => t.status === "completed" || t.status === "done").length} Verified (100%)
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-soft text-amber border border-amber/20">
                       <Clock className="w-3.5 h-3.5" />
-                      {myReviewTasks.filter((t) => ["in_review", "review", "submitted", "ai_review"].includes(t.status)).length} In Review (90%)
+                      {detailedInspectionTasks.filter((t) => ["in_review", "review", "submitted", "ai_review", "guide_review"].includes(t.status)).length} In Review (90%)
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-coral-soft text-coral border border-coral/20">
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      {myReviewTasks.filter((t) => t.status === "changes_requested" || t.submissions?.some((s) => s.aiAnalysis?.relevance?.isIrrelevant)).length} Changes Needed
+                      {detailedInspectionTasks.filter((t) => t.status === "changes_requested" || t.submissions?.some((s) => s.aiAnalysis?.relevance?.isIrrelevant || s.verification?.status === "FAIL" || s.verification?.status === "NEEDS_REVIEW")).length} Missing Requirements / Action Items
                     </span>
                   </div>
                 </div>
 
-                {/* Submissions Cards */}
-                {myReviewTasks.length === 0 ? (
+                {/* Submissions & Detailed Task Cards */}
+                {detailedInspectionTasks.length === 0 ? (
                   <div className="text-center py-8 text-slate-muted text-xs space-y-2">
                     <FolderArchive className="w-8 h-8 mx-auto text-slate-muted/50" />
-                    <p className="font-medium">No submission analyses available yet.</p>
-                    <p className="text-[11px]">Upload and submit your project ZIP archive on any assigned task to trigger automated AI verification.</p>
+                    <p className="font-medium">No tasks assigned yet.</p>
+                    <p className="text-[11px]">Tasks, AI instructions, and automated verification analyses will appear here.</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {myReviewTasks
-                      .map((taskItem) => {
-                        const sub = taskItem.latestSubmission || (taskItem.submissions && taskItem.submissions[taskItem.submissions.length - 1]);
-                        const ai = sub?.aiAnalysis || {};
-                        const ver = sub?.verification || {};
-                        const isPass = taskItem.status === "completed" || ver.status === "PASS";
-                        const isWrongProject = ai.relevance?.isIrrelevant || ai.implementationStatus === "WRONG_PROJECT";
-                        const isUnreadable = ai.implementationStatus === "UNREADABLE_ZIP";
-                        const isNeedsChanges = taskItem.status === "changes_requested" || ver.status === "FAIL";
+                    {detailedInspectionTasks.map((taskItem) => {
+                      const sub = taskItem.latestSubmission || (taskItem.submissions && taskItem.submissions[taskItem.submissions.length - 1]);
+                      const ai = sub?.aiAnalysis || {};
+                      const ver = sub?.verification || ai?.verification || {};
+                      const isPass = taskItem.status === "completed" || ver.status === "PASS";
+                      const isWrongProject = ai.relevance?.isIrrelevant || ai.implementationStatus === "WRONG_PROJECT";
+                      const isUnreadable = ai.implementationStatus === "UNREADABLE_ZIP";
+                      const isNeedsChanges = taskItem.status === "changes_requested" || ver.status === "FAIL" || ver.status === "NEEDS_REVIEW";
 
-                        return (
-                          <div key={taskItem.id || taskItem._id} className="rounded-xl border border-slate-line/80 bg-cloud/20 p-5 space-y-4 transition-all">
-                            {/* Task Header */}
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <div className="space-y-0.5">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h3 className="text-sm font-bold text-slate-ink">{taskItem.title}</h3>
+                      return (
+                        <div
+                          key={taskItem.id || taskItem._id}
+                          id={`task-detail-${taskItem.id || taskItem._id}`}
+                          className="rounded-xl border border-slate-line/80 bg-cloud/20 p-5 space-y-5 transition-all scroll-mt-20"
+                        >
+                          {/* Task Header */}
+                          <div className="flex items-center justify-between gap-3 flex-wrap border-b border-slate-line/60 pb-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-sm font-bold text-slate-ink">{taskItem.title}</h3>
+                                {taskItem.module && (
                                   <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-paper border border-slate-line text-slate-muted">
-                                    {taskItem.module || "General"}
+                                    {taskItem.module}
                                   </span>
-                                  {taskItem.deliverableType && (
-                                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-brand/10 text-brand">
-                                      📦 {taskItem.deliverableType}
-                                    </span>
+                                )}
+                                {taskItem.deliverableType && (
+                                  <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-brand/10 text-brand">
+                                    📦 {taskItem.deliverableType}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-muted">
+                                Assigned to: <strong className="text-slate-ink">{nameOf(taskItem.assigneeId)}</strong>
+                                {taskItem.due ? ` · Deadline: ${formatDay(taskItem.due)}` : ""}
+                                {taskItem.estimate ? ` · Estimate: ~${taskItem.estimate}h` : ""}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_BADGE[taskItem.status]?.tone || "bg-cloud text-slate-muted"}`}>
+                                {STATUS_BADGE[taskItem.status]?.label || taskItem.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* SECTION 1: AI Task Instructions & Requirements */}
+                          {(taskItem.whatToDo || taskItem.description || taskItem.expectedOutput || taskItem.aiPlan) && (
+                            <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4 space-y-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-xs font-bold text-brand-deep uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-brand" /> AI Task Instructions & Deliverable Scope
+                                </h4>
+                                {taskItem.aiPlan?.estimatedTotalEffort && (
+                                  <span className="text-[11px] font-medium text-brand">
+                                    Effort: {taskItem.aiPlan.estimatedTotalEffort}
+                                  </span>
+                                )}
+                              </div>
+
+                              {(taskItem.whatToDo || taskItem.description) && (
+                                <div className="text-xs text-slate-ink space-y-1">
+                                  <p className="font-semibold text-slate-muted text-[11px]">What to do:</p>
+                                  <p className="leading-relaxed bg-paper/60 p-2.5 rounded-lg border border-brand/10">
+                                    {taskItem.whatToDo || taskItem.description}
+                                  </p>
+                                </div>
+                              )}
+
+                              {taskItem.expectedOutput && (
+                                <div className="text-xs space-y-1">
+                                  <p className="font-semibold text-slate-muted text-[11px]">Expected Deliverable:</p>
+                                  <p className="leading-relaxed text-slate-ink bg-paper/60 p-2.5 rounded-lg border border-brand/10">
+                                    {taskItem.expectedOutput}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Subtasks breakdown */}
+                              {taskItem.aiPlan?.subtasks?.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <p className="font-semibold text-slate-muted text-[11px]">Implementation Subtasks:</p>
+                                  <ol className="list-decimal list-inside space-y-1 text-xs text-slate-ink bg-paper/60 p-2.5 rounded-lg border border-brand/10">
+                                    {taskItem.aiPlan.subtasks.map((s, i) => (
+                                      <li key={i}>
+                                        <span className="font-medium">{s.title}</span>
+                                        <span className="text-slate-muted text-[11px]"> ({s.difficulty}{s.estimatedHours ? `, ~${s.estimatedHours}h` : ""})</span>
+                                      </li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              )}
+
+                              {/* Acceptance Criteria & Testing Checklist Grid */}
+                              {(taskItem.aiPlan?.acceptanceCriteria?.length > 0 || taskItem.aiPlan?.testingChecklist?.length > 0) && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs">
+                                  {taskItem.aiPlan?.acceptanceCriteria?.length > 0 && (
+                                    <div className="p-2.5 rounded-lg bg-paper/70 border border-brand/10 space-y-1">
+                                      <p className="font-semibold text-slate-ink text-[11px] flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-mint" /> Acceptance Criteria
+                                      </p>
+                                      <ul className="list-disc list-inside text-[11px] text-slate-muted space-y-0.5">
+                                        {taskItem.aiPlan.acceptanceCriteria.map((c, i) => (
+                                          <li key={i}>{c}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {taskItem.aiPlan?.testingChecklist?.length > 0 && (
+                                    <div className="p-2.5 rounded-lg bg-paper/70 border border-brand/10 space-y-1">
+                                      <p className="font-semibold text-slate-ink text-[11px] flex items-center gap-1">
+                                        <Clock className="w-3 h-3 text-brand" /> Testing Checklist
+                                      </p>
+                                      <ul className="list-disc list-inside text-[11px] text-slate-muted space-y-0.5">
+                                        {taskItem.aiPlan.testingChecklist.map((c, i) => (
+                                          <li key={i}>{c}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   )}
                                 </div>
-                                <p className="text-xs text-slate-muted">
-                                  Assigned to: <strong className="text-slate-ink">{nameOf(taskItem.assigneeId)}</strong>
-                                  {taskItem.due ? ` · Deadline: ${formatDay(taskItem.due)}` : ""}
-                                </p>
-                              </div>
+                              )}
+                            </div>
+                          )}
 
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_BADGE[taskItem.status]?.tone || "bg-cloud text-slate-muted"}`}>
-                                  {STATUS_BADGE[taskItem.status]?.label || taskItem.status}
+                          {/* SECTION 2: AI Verification, Missing Files & Detailed Feedback (After Submission) */}
+                          {sub ? (
+                            <div className="space-y-4 pt-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="text-xs font-bold text-slate-ink uppercase tracking-wider flex items-center gap-1.5">
+                                  <FolderArchive className="w-3.5 h-3.5 text-brand" /> Submission Verification & AI Analysis (v{sub.version})
+                                </h4>
+                                <span className="text-[11px] text-slate-muted">
+                                  Submitted {formatDay(sub.submittedAt)} · {formatTime(sub.submittedAt)}
                                 </span>
                               </div>
+
+                              {/* Safe ZIP Content Relevance Check Banner */}
+                              {ai.relevance?.isIrrelevant && (
+                                <div className="rounded-xl border border-coral/30 bg-coral-soft p-3.5 space-y-1.5 text-xs text-coral">
+                                  <div className="flex items-start gap-2 font-semibold">
+                                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-coral" />
+                                    <span>⚠️ Incorrect Project / Unrelated ZIP Archive</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-ink font-normal leading-relaxed">
+                                    {ai.relevance.reason || "The uploaded ZIP does not appear to match your assigned task."}
+                                  </p>
+                                  {ai.relevance.evidence?.unmatchedReasons?.length > 0 && (
+                                    <ul className="list-disc list-inside text-[10px] text-slate-muted space-y-0.5 pl-2">
+                                      {ai.relevance.evidence.unmatchedReasons.map((r, idx) => (
+                                        <li key={idx}>{r}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Full SubmissionFeedbackPanel (Renders TaskVerificationCard, Missing Requirements, Satisfied Requirements, Code Review, Originality, etc.) */}
+                              {ai && (
+                                <div className="rounded-xl border border-slate-line/80 bg-paper p-4">
+                                  <SubmissionFeedbackPanel
+                                    analysis={ai}
+                                    submission={sub}
+                                    task={taskItem}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Submission History Panel */}
+                              {taskItem.submissions?.length > 0 && (
+                                <div className="pt-2">
+                                  <SubmissionHistoryPanel
+                                    task={taskItem}
+                                    submissions={taskItem.submissions}
+                                    currentUser={user}
+                                  />
+                                </div>
+                              )}
                             </div>
-
-                            {/* Prominent Status / Verdict Banners */}
-                            {isPass && (
-                              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-mint-soft border border-mint/30 text-xs text-mint">
-                                <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-                                <div className="space-y-1">
-                                  <p className="font-bold text-sm">AI Verified & Fully Complete (100%)</p>
-                                  <p className="text-[11px] text-slate-ink leading-relaxed">
-                                    {taskItem.completionReason || "All required deliverables and acceptance criteria have been verified against your submitted project archive. Student has satisfied their active task requirement and is now eligible for next assignment."}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {isWrongProject && (
-                              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-coral-soft border border-coral/30 text-xs text-coral">
-                                <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-coral" />
-                                <div className="space-y-1">
-                                  <p className="font-bold text-sm">Wrong Project / Unrelated Archive Detected</p>
-                                  <p className="text-[11px] text-slate-ink leading-relaxed">
-                                    {ai.relevance?.reason || "The uploaded archive appears to contain files from an unrelated project or different repository. Task progress was preserved without advancing to prevent false completion."}
-                                  </p>
-                                  <p className="text-[11px] font-semibold text-coral">
-                                    Action required: Re-upload the correct ZIP archive matching this task's deliverables.
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {isUnreadable && (
-                              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-coral-soft border border-coral/30 text-xs text-coral">
-                                <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-coral" />
-                                <div className="space-y-1">
-                                  <p className="font-bold text-sm">Unreadable or Corrupted Archive</p>
-                                  <p className="text-[11px] text-slate-ink leading-relaxed">
-                                    The ZIP file could not be safely extracted or verified. Please re-compress your code and re-upload.
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {isNeedsChanges && !isWrongProject && !isUnreadable && (
-                              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-soft border border-amber/30 text-xs text-amber">
-                                <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber" />
-                                <div className="space-y-1">
-                                  <p className="font-bold text-sm">Changes Requested — Incomplete Requirements</p>
-                                  <p className="text-[11px] text-slate-ink leading-relaxed">
-                                    {ver.feedback || "Submission verified with partial implementation. Key requirements or acceptance criteria are missing."}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Matched Evidence vs Missing Requirements Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                              <div className="p-3 rounded-xl border border-slate-line bg-paper space-y-2">
-                                <h4 className="font-bold text-slate-ink uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-mint" />
-                                  Completed Parts & Matched Evidence
-                                </h4>
-                                {ai.completedParts?.length > 0 ? (
-                                  <ul className="space-y-1 text-slate-muted list-disc pl-4 text-[11px]">
-                                    {ai.completedParts.map((part, i) => (
-                                      <li key={i} className="text-slate-ink">{part}</li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-slate-muted text-[11px] italic">No completed components detected yet.</p>
-                                )}
-                              </div>
-
-                              <div className="p-3 rounded-xl border border-slate-line bg-paper space-y-2">
-                                <h4 className="font-bold text-slate-ink uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-coral" />
-                                  Missing Requirements / Action Items
-                                </h4>
-                                {(ver.missingItems?.length > 0 || ai.missingParts?.length > 0) ? (
-                                  <ul className="space-y-1 text-coral list-disc pl-4 text-[11px]">
-                                    {(ver.missingItems || ai.missingParts || []).map((item, i) => (
-                                      <li key={i}>{item}</li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-mint text-[11px]">All evaluated requirements satisfied.</p>
-                                )}
-                              </div>
+                          ) : (
+                            <div className="rounded-xl border border-dashed border-slate-line/80 bg-paper/40 p-4 text-center text-xs text-slate-muted space-y-1">
+                              <p className="font-medium text-slate-ink">No ZIP archive submitted for this task yet.</p>
+                              <p className="text-[11px]">
+                                Use the <strong>"Submit ZIP Archive"</strong> button in your task board card above to upload your implementation ZIP.
+                                Automated AI verification, missing files checklist, and requirements inspection will be generated here automatically.
+                              </p>
                             </div>
-
-                            {/* Code Review & Suggestions */}
-                            {ai.codeReview?.issues?.length > 0 && (
-                              <div className="p-3.5 rounded-xl border border-slate-line bg-paper space-y-2 text-xs">
-                                <h4 className="font-bold text-slate-ink uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                                  <Sparkles className="w-3.5 h-3.5 text-brand" />
-                                  AI Code Quality & Static Analysis Feedback ({ai.codeReview.issues.length} findings)
-                                </h4>
-                                <div className="space-y-1.5">
-                                  {ai.codeReview.issues.slice(0, 4).map((iss, i) => (
-                                    <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-cloud/50 border border-slate-line/50 text-[11px]">
-                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                                        iss.severity === "CRITICAL" ? "bg-coral text-white" : iss.severity === "HIGH" ? "bg-coral/20 text-coral" : "bg-amber/20 text-amber"
-                                      }`}>
-                                        {iss.severity}
-                                      </span>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="font-semibold text-slate-ink">{iss.message}</p>
-                                        {iss.suggestion && <p className="text-slate-muted mt-0.5">💡 {iss.suggestion}</p>}
-                                        {iss.file && <p className="font-mono text-[10px] text-slate-muted mt-0.5">{iss.file}{iss.line ? `:${iss.line}` : ""}</p>}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Submission History Panel Integration */}
-                            {taskItem.submissions?.length > 0 && (
-                              <div className="pt-2">
-                                <SubmissionHistoryPanel
-                                  task={taskItem}
-                                  submissions={taskItem.submissions}
-                                  currentUser={user}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </section>

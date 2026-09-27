@@ -239,12 +239,16 @@ function buildUnreadableZipResult(err, originalName = "") {
     implementationStatus: "UNREADABLE_ZIP",
     progress: 0,
     progressLabel: "Not Started",
-    summary: "Unable to analyze this ZIP file. Please upload a valid project ZIP.",
+    summary: "❌ Unable to open or extract this ZIP file. Please verify and re-upload your project ZIP.",
     completedParts: [],
-    missingParts: [err?.message || "The uploaded file could not be safely extracted."],
-    criticalIssues: ["Unable to analyze this ZIP file."],
+    missingParts: [err?.message || "The uploaded file could not be safely extracted or is corrupted."],
+    criticalIssues: ["❌ Unreadable archive — file cannot be extracted safely."],
     positiveFindings: [],
-    suggestions: ["Re-zip your project folder (avoid password-protection or corruption) and try uploading again."],
+    suggestions: [
+      "1. Make sure your project directory is compressed as a standard, non-corrupt .zip archive.",
+      "2. Avoid password-protecting the zip file.",
+      "3. Re-upload the .zip folder here to try again.",
+    ],
     analyzedFiles: [],
     relevance: {
       status: "IRRELEVANT",
@@ -262,6 +266,7 @@ function buildUnreadableZipResult(err, originalName = "") {
     },
   };
 }
+
 
 const isZipFile = (originalName = "") => path.extname(originalName).toLowerCase() === ".zip";
 
@@ -421,33 +426,63 @@ function analyzeLocally({ manifest, referenceProject, task }) {
 
   let implementationStatus;
   let progress;
+  let summary;
+  let suggestions = [];
+  let missingParts = [];
+  let criticalIssues = [];
+
   if (!projectRelated) {
     implementationStatus = "WRONG_PROJECT";
     progress = 0;
+    summary = "❌ Incorrect ZIP folder uploaded. The files in this ZIP do not belong to the TeamSync AI project.";
+    missingParts = ["Expected TeamSync AI project files and assigned task code were not found."];
+    criticalIssues = ["❌ Wrong ZIP folder — archive does not match the assigned project."];
+    suggestions = [
+      "1. Make sure you select the correct TeamSync project folder on your computer.",
+      "2. Compress the root project folder into a .zip archive.",
+      "3. Upload the correct ZIP folder here to redo the task check.",
+    ];
   } else if (!taskRelated) {
     implementationStatus = "PROJECT_RELATED_TASK_NOT_IMPLEMENTED";
-    progress = 10;
+    progress = 15;
+    summary = `⚠️ Project folder detected, but code for assigned task "${task.title || "Task"}" is missing from this ZIP.`;
+    missingParts = [
+      `Missing task-specific code files for "${task.title || "Task"}" (${task.module || "General module"}).`,
+      "No implementation functions or routes found for this assigned task.",
+    ];
+    criticalIssues = [`Assigned task "${task.title || "Task"}" has not been implemented in this ZIP yet.`];
+    suggestions = [
+      `1. Open your code editor and implement the required features for "${task.title || "Task"}".`,
+      "2. Save your new or updated code files inside your project directory.",
+      "3. Re-zip your project folder and submit the updated ZIP folder again.",
+    ];
   } else if (hasPlaceholders || matchedFiles.length < 2) {
     implementationStatus = "PARTIAL_PROGRESS";
-    progress = 55;
+    progress = Math.min(65, Math.max(35, 35 + matchedFiles.length * 10));
+    summary = `🔄 Task partially completed (${progress}%). Some required features or topics are still missing.`;
+    missingParts = hasPlaceholders
+      ? ["Unresolved TODO/FIXME markers found in the submission."]
+      : ["Additional task components and full logic implementation needed."];
+    criticalIssues = ["Unfinished code or placeholders need to be completed before approval."];
+    suggestions = [
+      "1. Complete the missing features and resolve all TODO/placeholder markers in your code.",
+      "2. Verify that all components for this task function properly.",
+      "3. Re-zip your project folder and upload the new ZIP folder to reach 100% completion.",
+    ];
   } else {
     implementationStatus = "VALID_SUBMISSION";
-    progress = 90;
+    progress = Math.min(100, Math.max(90, 85 + matchedFiles.length * 3));
+    summary = `🎉 Valid submission (${progress}%)! All required implementation files for "${task.title || "Task"}" are present across ${matchedFiles.length} file(s): ${matchedFiles.slice(0, 5).join(", ")}.`;
+    missingParts = [];
+    criticalIssues = [];
+    suggestions = [
+      "Your submission looks complete and has been forwarded to your guide for final review and approval.",
+    ];
   }
-
-  const summary = !projectRelated
-    ? "The uploaded ZIP does not share enough structure or naming with the current TeamSync AI project to be recognised as this project."
-    : !taskRelated
-      ? "The ZIP belongs to TeamSync AI, but no files related to the assigned task were found."
-      : `Found ${matchedFiles.length} file(s) related to the assigned task (${matchedFiles.slice(0, 5).join(", ")}).`;
-
-  const criticalIssues = [];
-  if (!projectRelated) criticalIssues.push("This ZIP does not appear to be the TeamSync AI project.");
-  else if (!taskRelated) criticalIssues.push(`No files related to the assigned task were found.`);
 
   const positiveFindings = [];
   if (projectRelated) positiveFindings.push("Correct TeamSync AI project detected.");
-  if (taskRelated) positiveFindings.push(`Task-related implementation found in ${matchedFiles.length} file(s).`);
+  if (taskRelated) positiveFindings.push(`Task-related implementation found in ${matchedFiles.length} file(s): ${matchedFiles.slice(0, 3).join(", ")}.`);
 
   return {
     engine: "node-heuristics",
@@ -460,13 +495,14 @@ function analyzeLocally({ manifest, referenceProject, task }) {
     progressLabel: progressLabelFor(progress),
     summary,
     completedParts: taskRelated ? matchedFiles.slice(0, 10) : [],
-    missingParts: hasPlaceholders ? ["Unresolved TODO/FIXME markers found in the submission"] : [],
+    missingParts,
     criticalIssues,
     positiveFindings,
-    suggestions: hasPlaceholders ? ["Resolve remaining TODO/FIXME markers before final submission."] : [],
+    suggestions,
     analyzedFiles: manifest.files.map((f) => f.relPath),
   };
 }
+
 
 function clampResult(raw, manifest) {
   const implementationStatus = CATEGORIES.includes(raw.implementationStatus)

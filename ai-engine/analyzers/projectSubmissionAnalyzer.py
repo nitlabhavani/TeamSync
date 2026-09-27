@@ -198,7 +198,7 @@ def analyze_task_submission(payload: dict) -> dict:
     project_related = project_confidence >= PROJECT_RELATED_THRESHOLD
 
     if not project_related:
-        missing = ["No recognizable TeamSync AI project files were found in this submission."]
+        missing = ["No matching TeamSync AI project files were found in this archive."]
         return {
             "engine": "ai-engine",
             "projectRelated": False,
@@ -209,15 +209,19 @@ def analyze_task_submission(payload: dict) -> dict:
             "progress": 0,
             "progressLabel": _progress_label(0),
             "summary": (
-                "This ZIP does not appear to be related to the TeamSync AI project or the assigned task. "
-                "Expected TeamSync AI files/features (matching services, models or routes) were not found, "
-                "and the project structure does not match."
+                "❌ Incorrect ZIP folder uploaded. The files in this ZIP do not belong to the TeamSync AI project."
             ),
             "completedParts": [],
-            "missingParts": missing,
-            "criticalIssues": ["❌ Wrong ZIP folder — this does not appear to be the TeamSync AI project."],
+            "missingParts": [
+                "Expected TeamSync AI project files and assigned task code were not found in this archive."
+            ],
+            "criticalIssues": ["❌ Wrong ZIP folder — archive does not match the assigned project."],
             "positiveFindings": [],
-            "suggestions": ["Upload the correct TeamSync AI project ZIP and try again."],
+            "suggestions": [
+                "1. Check your computer and locate the correct TeamSync project folder.",
+                "2. Make sure you compress the entire root project directory into a new .zip archive.",
+                "3. Upload the correct ZIP folder here to redo the submission.",
+            ],
             "analyzedFiles": analyzed_files,
             "analyzedAt": now().isoformat(),
         }
@@ -232,36 +236,39 @@ def analyze_task_submission(payload: dict) -> dict:
             "taskRelated": False,
             "taskConfidence": task_confidence,
             "implementationStatus": "PROJECT_RELATED_TASK_NOT_IMPLEMENTED",
-            "progress": 10,
-            "progressLabel": _progress_label(10),
+            "progress": 15,
+            "progressLabel": _progress_label(15),
             "summary": (
-                "Your project is related to TeamSync AI, but the assigned task has not been implemented yet. "
-                "Continue working on the task and submit the updated project."
+                f"⚠️ Project folder detected, but code for your assigned task \"{task_title}\" is missing from this ZIP."
             ),
-            "completedParts": identity_reasons[:5],
-            "missingParts": [f"No files related to \"{task_title}\" were found in this submission."],
-            "criticalIssues": [f"Required implementation for \"{task_title}\" is missing."],
+            "completedParts": [f"Matching base project structure detected ({len(identity_reasons)} items)"] + identity_reasons[:4],
+            "missingParts": [
+                f"Missing task-specific code files for \"{task_title}\" ({task_module or 'General module'}).",
+                "No implementation functions or routes found for this assigned task."
+            ],
+            "criticalIssues": [f"Assigned task \"{task_title}\" has not been implemented yet."],
             "positiveFindings": identity_reasons[:5],
-            "suggestions": ["Implement the assigned task and resubmit once the related files are present."],
+            "suggestions": [
+                f"1. Open your code editor and implement the required features for \"{task_title}\".",
+                "2. Save your new or updated code files inside your project directory.",
+                "3. Re-zip your project folder and submit the updated ZIP folder again.",
+            ],
             "analyzedFiles": analyzed_files,
             "analyzedAt": now().isoformat(),
         }
 
     issues, suggestions = _inspect_quality([f for f in files if f.get("relPath") in matched_files])
 
-    # How complete does the matched work look? We can't run the code, so we
-    # use concrete static signals: how many task-relevant files were
-    # touched, and whether they contain unresolved placeholders.
     has_placeholders = any("Unresolved TODO/placeholder" in i or "Empty function" in i for i in issues)
     match_strength = len(matched_files)
 
     positive_base = [f"Correct TeamSync AI project detected ({project_confidence}% confidence)."]
     if matched_files:
-        positive_base.append(f"Task-related implementation found in {len(matched_files)} file(s).")
+        positive_base.append(f"Matching task files found ({len(matched_files)} files): {', '.join(matched_files[:4])}.")
 
     if has_placeholders or match_strength < 2:
-        progress = clamp(35 + match_strength * 10, 0, 65)
-        missing = issues if issues else ["Additional task-related files/functionality were expected but not found."]
+        progress = clamp(35 + match_strength * 10, 35, 65)
+        missing = issues if issues else ["Additional task components and full logic implementation needed."]
         return {
             "engine": "ai-engine",
             "projectRelated": True,
@@ -271,18 +278,22 @@ def analyze_task_submission(payload: dict) -> dict:
             "implementationStatus": "PARTIAL_PROGRESS",
             "progress": progress,
             "progressLabel": _progress_label(progress),
-            "summary": "Good progress! The task-related implementation is present, but some required parts are still incomplete.",
+            "summary": f"🔄 Task partially completed ({progress}%). Some required features or topics are still missing.",
             "completedParts": matched_files,
             "missingParts": missing,
-            "criticalIssues": [],
+            "criticalIssues": ["Unfinished code or placeholders need to be completed before approval."],
             "positiveFindings": positive_base,
-            "suggestions": suggestions or ["Finish the remaining implementation and remove any TODO/placeholder code."],
+            "suggestions": suggestions or [
+                "1. Complete the missing features and resolve all TODO/placeholder markers in your code.",
+                "2. Verify that all components for this task function properly.",
+                "3. Re-zip your project folder and upload the new ZIP folder to achieve 100% completion.",
+            ],
             "analyzedFiles": analyzed_files,
             "analyzedAt": now().isoformat(),
         }
 
     if issues:
-        progress = clamp(70 + match_strength * 5, 0, 89)
+        progress = clamp(70 + match_strength * 5, 70, 89)
         return {
             "engine": "ai-engine",
             "projectRelated": True,
@@ -292,17 +303,21 @@ def analyze_task_submission(payload: dict) -> dict:
             "implementationStatus": "VALID_BUT_NEEDS_IMPROVEMENT",
             "progress": progress,
             "progressLabel": _progress_label(progress),
-            "summary": "Task implementation found, but a few improvements are recommended before considering it production-ready.",
+            "summary": f"💡 Implementation found ({progress}%). A few minor improvements are recommended.",
             "completedParts": matched_files,
             "missingParts": issues,
             "criticalIssues": [],
             "positiveFindings": positive_base,
-            "suggestions": suggestions or ["Address the noted issues before final submission."],
+            "suggestions": suggestions or [
+                "1. Address the code improvement suggestions noted above.",
+                "2. Double check error handling and edge cases.",
+                "3. Re-submit the updated ZIP if you make revisions, or notify your guide for review.",
+            ],
             "analyzedFiles": analyzed_files,
             "analyzedAt": now().isoformat(),
         }
 
-    progress = clamp(85 + match_strength * 3, 0, 100)
+    progress = clamp(85 + match_strength * 3, 90, 100)
     return {
         "engine": "ai-engine",
         "projectRelated": True,
@@ -313,14 +328,17 @@ def analyze_task_submission(payload: dict) -> dict:
         "progress": progress,
         "progressLabel": _progress_label(progress),
         "summary": (
-            f"Valid submission! Your implementation is related to the assigned task and the required changes "
+            f"🎉 Valid submission ({progress}%)! All required implementation files for \"{task_title}\" "
             f"are present across {len(matched_files)} file(s): {', '.join(matched_files[:5])}."
         ),
         "completedParts": matched_files,
         "missingParts": [],
         "criticalIssues": [],
-        "positiveFindings": positive_base + ["Good code structure — no unresolved TODOs or empty function bodies detected."],
-        "suggestions": suggestions,
+        "positiveFindings": positive_base + ["Clean code structure — no unresolved TODO markers detected."],
+        "suggestions": suggestions or [
+            "Your submission looks complete and has been forwarded to your guide for final review and approval."
+        ],
         "analyzedFiles": analyzed_files,
         "analyzedAt": now().isoformat(),
     }
+

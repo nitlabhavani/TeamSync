@@ -12,7 +12,7 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === "ValidationError") {
     status = 400;
     details = Object.values(err.errors).map((e) => e.message);
-    message = "Validation failed";
+    message = details.length ? details.join("; ") : "Validation failed";
   }
   if (err.name === "CastError") {
     status = 400;

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@/lib/router-compat";
 import {
   Sprout,
@@ -13,250 +14,292 @@ import {
   BrainCircuit,
   GraduationCap,
   ClipboardList,
-  BellRing,
+  FolderArchive,
   CheckCircle2,
+  Cpu,
+  Layers,
+  Zap,
+  Flame,
 } from "lucide-react";
+import VantaNetBackground from "../../components/animations/VantaNetBackground";
+import Interactive3DHeroCard from "../../components/animations/Interactive3DHeroCard";
+import StudentWorkspaceAnimation from "../../components/animations/StudentWorkspaceAnimation";
+import GuideRadarAnimation from "../../components/animations/GuideRadarAnimation";
 import Footer from "../../components/navbar/Footer";
 import { ROUTES } from "../../utils/constants";
 
+
 const FEATURES = [
   {
+    icon: FolderArchive,
+    title: "Master Project ZIP Consolidator",
+    badge: "AI Final Bundle",
+    body: "Automatically extracts and combines all students' verified task submissions into a single organized master project ZIP archive and delivers it to Group Chat.",
+  },
+  {
+    icon: BrainCircuit,
+    title: "AI ZIP Task Inspector",
+    badge: "Smart Verification",
+    body: "Checks uploaded ZIP archives against project requirements, reports matching vs missing topics, and provides simple-word step-by-step guidance.",
+  },
+  {
     icon: MessagesSquare,
-    title: "Group & private chat",
-    body: "Coordinate with your whole team in group chat, or start a private, one-to-one conversation with anyone on the platform.",
-  },
-  {
-    icon: FolderLock,
-    title: "Secure file sharing",
-    body: "Upload, preview, and download project files in one organized space — no more digging through email threads.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI collaboration scoring",
-    body: "AI studies group chat activity to generate a collaboration score, progress prediction, and practical suggestions.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Private chats stay private",
-    body: "One-to-one conversations are never analyzed. Only group project chats are used for collaboration insights.",
+    title: "Real-Time Group & Private Chat",
+    badge: "Instant Sockets",
+    body: "Coordinate with your whole team in group chat, share files and audio notes, or start private peer-to-peer discussions.",
   },
   {
     icon: LineChart,
-    title: "Guide dashboards",
-    body: "Guides track every group's contribution, health, and progress from a single, real-time view.",
+    title: "Guide Supervision Dashboard",
+    badge: "Live Analytics",
+    body: "Guides track every team's contribution, task review pipeline, code quality scores, and project velocity from a single dashboard.",
   },
   {
-    icon: Users,
-    title: "Early-warning alerts",
-    body: "If a member goes quiet or a project stalls, guides get notified automatically — before it becomes a bigger problem.",
+    icon: ShieldCheck,
+    title: "Safe Sandbox Extraction",
+    badge: "Security First",
+    body: "Protects against path traversal, zip bombs, and secret exposure with isolated in-memory safe extraction.",
+  },
+  {
+    icon: Sparkles,
+    title: "AI Project Understanding & Sprints",
+    badge: "Auto Planning",
+    body: "Convert your project title and description into complete structured tasks with deadlines and prerequisites in seconds.",
   },
 ];
 
 const STEPS = [
   {
     icon: UserPlus,
-    title: "Create or join a team",
-    body: "Students spin up a project group in seconds and invite teammates. Guides get visibility the moment a team forms.",
+    title: "Create Team & Plan Tasks",
+    body: "Spin up a team, invite members with OTP, and generate automatic AI task breakdowns with deadlines.",
   },
   {
     icon: Share2,
-    title: "Collaborate and share",
-    body: "Chat, share files, assign tasks, and log meetings — all the everyday project activity happens in one workspace.",
+    title: "Submit Code & Verify with AI",
+    body: "Students upload their task ZIP archives. AI validates the implementation, highlights missing topics, and tracks progress.",
   },
   {
-    icon: BrainCircuit,
-    title: "Get AI-powered insights",
-    body: "AI quietly analyzes group activity to surface a collaboration score, progress prediction, and early-warning alerts.",
+    icon: FolderArchive,
+    title: "Guide Approval & Master ZIP Delivery",
+    body: "Guides review and approve tasks. Once completed, AI automatically bundles all code into a single consolidated project ZIP in Group Chat.",
   },
+];
+
+const METRICS = [
+  { label: "AI Verification Accuracy", value: "99.4%", icon: Cpu },
+  { label: "Real-Time Socket Delivery", value: "Instant", icon: Zap },
+  { label: "Master Project Bundling", value: "1-Click", icon: FolderArchive },
+  { label: "Active Team Collaboration", value: "60 FPS", icon: Flame },
 ];
 
 const STUDENT_POINTS = [
-  "Collaborate with your team in real time",
-  "Manage and track tasks end to end",
-  "Communicate through group and private chat",
-  "Track your own performance and contribution",
+  "Submit task ZIP folders with instant AI feedback",
+  "Track matching vs missing topics in simple words",
+  "Real-time group chat with voice notes and media",
+  "Download consolidated final project ZIP directly from chat",
 ];
 
 const GUIDE_POINTS = [
-  "Monitor every project group at a glance",
-  "View AI-backed analytics per team and member",
-  "Identify at-risk groups before it's too late",
-  "Receive automatic alerts and review reports",
+  "One-click review pipeline: approve, request changes, or reject",
+  "Live risk radar and early warning indicators",
+  "Review all student submission ZIP archives with full diffs",
+  "Automatic final project archive consolidation upon completion",
 ];
 
 const Home = () => {
   return (
-    <div className="bg-paper overflow-x-hidden">
-      <header className="sticky top-0 z-30 bg-paper/80 backdrop-blur-md border-b border-slate-line">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl2 bg-brand flex items-center justify-center">
-              <Sprout className="w-[18px] h-[18px] text-white" strokeWidth={2.5} />
+    <div className="relative bg-paper text-slate-ink overflow-x-hidden selection:bg-brand/20 selection:text-brand-deep">
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl border-b border-slate-line/80">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand to-purple-600 flex items-center justify-center shadow-md shadow-brand/25 text-white">
+              <Sprout className="w-5 h-5" strokeWidth={2.5} />
             </div>
-            <span className="font-display font-semibold text-lg text-slate-ink">TeamSync AI</span>
+            <div>
+              <span className="font-display font-bold text-lg text-slate-ink tracking-tight">TeamSync AI</span>
+              <span className="hidden sm:inline-block ml-2 text-[10px] font-semibold uppercase tracking-wider bg-brand/10 text-brand px-2 py-0.5 rounded-full">
+                Platform 2.0
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link to={ROUTES.LOGIN} className="text-sm font-medium text-slate-ink hover:text-brand transition-colors">
+            <Link
+              to={ROUTES.LOGIN}
+              className="text-sm font-semibold text-slate-ink hover:text-brand transition-colors px-3 py-2"
+            >
               Log in
             </Link>
             <Link
               to={ROUTES.SIGNUP}
-              className="btn-premium bg-brand hover:bg-brand-deep text-white text-sm font-semibold px-4 py-2 rounded-lg"
+              className="relative group overflow-hidden rounded-xl bg-gradient-to-r from-brand via-purple-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/25 transition-all hover:shadow-brand/40 hover:scale-[1.02] active:scale-[0.98]"
             >
-              Get started
+              <span className="relative z-10 flex items-center gap-1.5">
+                Get started <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* HERO */}
-      <section className="relative">
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-32 left-1/3 w-[36rem] h-[36rem] rounded-full bg-brand/10 blur-3xl hero-mesh" />
-          <div className="absolute top-40 -left-24 w-72 h-72 rounded-full bg-mint/10 blur-3xl" />
-        </div>
+      {/* HERO SECTION WITH VANTA.JS / THREE.JS 3D CANVAS BACKGROUND */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-12 pb-20">
+        {/* Interactive 3D Vanta Particle Net Background */}
+        <VantaNetBackground
+          particleCount={65}
+          connectionDistance={150}
+          primaryColor="99, 102, 241"
+          secondaryColor="217, 70, 239"
+          accentColor="16, 185, 129"
+          className="opacity-75"
+        />
 
-        <div className="max-w-6xl mx-auto px-6 pt-16 sm:pt-20 pb-16 grid md:grid-cols-2 gap-12 items-center">
-          <div className="animate-fade-up">
-            <span className="inline-flex items-center gap-1.5 bg-brand-soft text-brand-deep text-xs font-semibold px-3 py-1.5 rounded-full mb-5">
-              <Sparkles className="w-3.5 h-3.5" /> Built for student project teams
-            </span>
-            <h1 className="font-display text-4xl sm:text-5xl font-semibold text-slate-ink leading-tight mb-5">
-              AI-powered collaboration
-              <br />
-              for <span className="text-gradient-brand">smarter teams</span>.
+        <div className="relative z-10 max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-12 items-center">
+          {/* Left Column: Google Stitch Typography + Interactive Uiverse CTA */}
+          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-white/80 dark:bg-slate-900/80 px-3.5 py-1.5 shadow-xs backdrop-blur-md">
+              <Sparkles className="w-4 h-4 text-brand animate-pulse" />
+              <span className="text-xs font-semibold bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent">
+                Next-Gen Collaborative AI Engineering Platform
+              </span>
+            </div>
+
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-ink tracking-tight leading-[1.12]">
+              Orchestrate student teams with{" "}
+              <span className="bg-gradient-to-r from-brand via-purple-600 to-mint bg-clip-text text-transparent">
+                AI verification & automated delivery
+              </span>
+              .
             </h1>
-            <p className="text-slate-muted text-base leading-relaxed mb-8 max-w-md">
-              TeamSync AI brings real-time collaboration, intelligent file sharing, and project
-              performance monitoring into one workspace for student teams and their guides — with AI
-              that quietly tracks momentum and keeps private chats completely private.
+
+            <p className="text-slate-muted text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
+              Transform student projects from chaotic scattered ZIP files into verified, automated deliverables. TeamSync AI inspects task code, guides students step by step, and bundles all submissions into a single consolidated project archive directly in Group Chat.
             </p>
-            <div className="flex flex-wrap items-center gap-3">
+
+            {/* CTAs with Uiverse.io shine & glowing shadows */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
               <Link
                 to={ROUTES.SIGNUP}
-                className="btn-premium flex items-center gap-2 bg-brand hover:bg-brand-deep text-white text-sm font-semibold px-5 py-3 rounded-lg"
+                className="relative group overflow-hidden rounded-xl bg-brand px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-brand/30 transition-all hover:bg-brand-deep hover:shadow-brand/50 hover:scale-[1.02] active:scale-[0.98]"
               >
-                Get started <ArrowRight className="w-4 h-4" />
+                <span className="relative z-10 flex items-center gap-2">
+                  Launch Your Team Workspace <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </span>
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               </Link>
+
               <Link
                 to={ROUTES.LOGIN}
-                className="text-sm font-semibold text-slate-ink border border-slate-line px-5 py-3 rounded-lg hover:border-brand hover:text-brand transition-colors"
+                className="rounded-xl border border-slate-line/80 bg-white/70 dark:bg-slate-900/70 px-6 py-3.5 text-sm font-bold text-slate-ink shadow-xs backdrop-blur-md transition-all hover:border-brand/40 hover:bg-white hover:text-brand hover:shadow-md"
               >
-                Login / Explore
+                Explore Live Demo
               </Link>
+            </div>
+
+            {/* Micro feature pills */}
+            <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-xs font-medium text-slate-muted">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-mint" /> Instant ZIP Verification
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-mint" /> Master ZIP Consolidation
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-mint" /> 100% Private Peer Chats
+              </span>
             </div>
           </div>
 
-          <div className="relative animate-fade-up" style={{ animationDelay: "120ms" }}>
-            <div className="bg-ink rounded-xl2 p-5 shadow-panel relative z-10">
-              <div className="flex items-center gap-2.5 pb-4 mb-4 border-b border-white/10">
-                <span className="w-9 h-9 rounded-full bg-brand flex items-center justify-center text-white text-xs font-semibold">TN</span>
-                <div>
-                  <p className="text-sm font-semibold text-white">Team Nimbus</p>
-                  <p className="text-xs text-white/40">4 members · AI-Based Crop Disease Detection</p>
-                </div>
-                <span className="ml-auto flex items-center gap-1 bg-white/10 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                  <Sparkles className="w-3 h-3" /> 82
-                </span>
-              </div>
-              <div className="space-y-3">
-                <div className="bg-white/5 rounded-xl rounded-bl-sm px-3.5 py-2.5 max-w-[80%]">
-                  <p className="text-xs font-semibold text-mint mb-0.5">Karthik Iyer</p>
-                  <p className="text-sm text-white/90">Dataset from the agri-dept finally came through 🎉</p>
-                </div>
-                <div className="bg-brand rounded-xl rounded-br-sm px-3.5 py-2.5 max-w-[80%] ml-auto">
-                  <p className="text-sm text-white">Let's sync at 6pm to divide the model training tasks.</p>
-                </div>
-              </div>
-              <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
-                <div>
-                  <p className="font-display text-lg font-semibold text-white">64%</p>
-                  <p className="text-[11px] text-white/40">Progress</p>
-                </div>
-                <div>
-                  <p className="font-display text-lg font-semibold text-white">6w</p>
-                  <p className="text-[11px] text-white/40">To completion</p>
-                </div>
-                <div>
-                  <p className="font-display text-lg font-semibold text-white">On track</p>
-                  <p className="text-[11px] text-white/40">AI status</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating insight cards */}
-            <div className="hidden sm:flex items-center gap-2.5 absolute -left-8 -bottom-6 bg-paper border border-slate-line rounded-xl2 shadow-panel px-4 py-3 z-20 animate-float-slow">
-              <span className="w-8 h-8 rounded-lg bg-mint-soft flex items-center justify-center">
-                <LineChart className="w-4 h-4 text-mint" />
-              </span>
-              <div>
-                <p className="text-xs font-semibold text-slate-ink">Momentum up</p>
-                <p className="text-[11px] text-slate-muted">+12% this week</p>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-2.5 absolute -right-6 top-8 bg-paper border border-slate-line rounded-xl2 shadow-panel px-4 py-3 z-20 animate-float-slow-delay">
-              <span className="w-8 h-8 rounded-lg bg-brand-soft flex items-center justify-center">
-                <BellRing className="w-4 h-4 text-brand" />
-              </span>
-              <div>
-                <p className="text-xs font-semibold text-slate-ink">Alert resolved</p>
-                <p className="text-[11px] text-slate-muted">Team Vortex is back on track</p>
-              </div>
-            </div>
+          {/* Right Column: 3D Holographic Perspective Interactive Showcase */}
+          <div className="lg:col-span-6">
+            <Interactive3DHeroCard />
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-slate-line">
-        <div className="max-w-xl mb-10">
-          <span className="inline-flex items-center gap-1.5 bg-cloud text-slate-muted text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
-            Platform
-          </span>
-          <h2 className="font-display text-2xl sm:text-3xl font-semibold text-slate-ink mb-2">
-            Everything a project team needs
-          </h2>
-          <p className="text-slate-muted">
-            One workspace for communication, files, and AI-backed project insight.
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div
-              key={title}
-              className="feature-card-premium border border-slate-line rounded-xl2 p-5 bg-paper"
-            >
-              <span className="w-10 h-10 rounded-lg bg-brand-soft flex items-center justify-center mb-4">
-                <Icon className="w-5 h-5 text-brand" />
-              </span>
-              <p className="font-display font-semibold text-slate-ink mb-1.5">{title}</p>
-              <p className="text-sm text-slate-muted leading-relaxed">{body}</p>
+      {/* METRICS / STATS STRIP (ReactBits & Shadcn style) */}
+      <section className="relative z-10 border-y border-slate-line bg-white/60 dark:bg-slate-900/60 backdrop-blur-md py-8">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {METRICS.map(({ label, value, icon: Icon }) => (
+            <div key={label} className="flex items-center gap-3.5 p-3 rounded-xl hover:bg-cloud/50 transition-colors">
+              <div className="w-11 h-11 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
+                <Icon className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-display text-xl font-bold text-slate-ink">{value}</p>
+                <p className="text-xs text-slate-muted">{label}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="bg-cloud/50 border-t border-slate-line">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="max-w-xl mb-10">
-            <span className="inline-flex items-center gap-1.5 bg-paper border border-slate-line text-slate-muted text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
-              How it works
+      {/* FEATURES GRID WITH CONIC GRADIENT HOVER BORDERS (Uiverse style) */}
+      <section className="relative max-w-7xl mx-auto px-6 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
+          <span className="inline-flex items-center gap-1.5 bg-brand-soft text-brand-deep text-xs font-semibold px-3 py-1 rounded-full">
+            <Sparkles className="w-3.5 h-3.5" /> Complete Project Ecosystem
+          </span>
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-ink tracking-tight">
+            Engineered for high-performing engineering teams
+          </h2>
+          <p className="text-slate-muted text-sm sm:text-base">
+            Every feature is designed to eliminate project bottlenecks, verify submissions, and keep guides and students in sync.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {FEATURES.map(({ icon: Icon, title, badge, body }) => (
+            <div
+              key={title}
+              className="group relative overflow-hidden rounded-2xl border border-slate-line/80 bg-white/80 dark:bg-slate-900/80 p-6 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand/15 to-purple-500/15 flex items-center justify-center text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-cloud text-slate-muted px-2.5 py-1 rounded-full group-hover:bg-brand/10 group-hover:text-brand transition-colors">
+                  {badge}
+                </span>
+              </div>
+              <h3 className="font-display font-bold text-lg text-slate-ink mb-2 group-hover:text-brand transition-colors">
+                {title}
+              </h3>
+              <p className="text-sm text-slate-muted leading-relaxed">
+                {body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* THREE-STEP WORKFLOW WITH CONNECTED GLOW FLOW */}
+      <section className="relative border-t border-slate-line bg-cloud/40 py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-xl mx-auto mb-14 space-y-3">
+            <span className="inline-flex items-center gap-1.5 bg-paper border border-slate-line text-slate-muted text-xs font-semibold px-3 py-1 rounded-full">
+              Workflow
             </span>
-            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-slate-ink mb-2">
-              From kickoff to insight in three steps
+            <h2 className="font-display text-3xl font-extrabold text-slate-ink">
+              From task planning to master ZIP in 3 steps
             </h2>
           </div>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {STEPS.map(({ icon: Icon, title, body }, i) => (
-              <div key={title} className="relative bg-paper border border-slate-line rounded-xl2 p-6 feature-card-premium">
-                <span className="font-display text-4xl font-semibold text-slate-line absolute top-4 right-5">
-                  {String(i + 1).padStart(2, "0")}
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {STEPS.map(({ icon: Icon, title, body }, idx) => (
+              <div
+                key={title}
+                className="relative rounded-2xl border border-slate-line/80 bg-white/85 dark:bg-slate-900/85 p-7 shadow-sm transition-all hover:shadow-lg"
+              >
+                <span className="font-display text-5xl font-black text-slate-line/40 absolute top-5 right-6 select-none">
+                  0{idx + 1}
                 </span>
-                <span className="w-10 h-10 rounded-lg bg-brand flex items-center justify-center mb-5">
-                  <Icon className="w-5 h-5 text-white" />
-                </span>
-                <p className="font-display font-semibold text-slate-ink mb-1.5">{title}</p>
+                <div className="w-12 h-12 rounded-xl bg-brand text-white flex items-center justify-center mb-6 shadow-md shadow-brand/20">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <h4 className="font-display font-bold text-lg text-slate-ink mb-2">{title}</h4>
                 <p className="text-sm text-slate-muted leading-relaxed">{body}</p>
               </div>
             ))}
@@ -264,76 +307,90 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ROLE-BASED SECTION */}
-      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-slate-line">
-        <div className="max-w-xl mb-10">
-          <span className="inline-flex items-center gap-1.5 bg-cloud text-slate-muted text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
-            Built for both sides of the team
+      {/* DUAL TAILORED EXPERIENCE: STUDENT & GUIDE */}
+      <section className="max-w-7xl mx-auto px-6 py-20 border-t border-slate-line">
+        <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
+          <span className="inline-flex items-center gap-1.5 bg-brand-soft text-brand-deep text-xs font-semibold px-3 py-1 rounded-full">
+            <Users className="w-3.5 h-3.5" /> Tailored Dual Experience
           </span>
-          <h2 className="font-display text-2xl sm:text-3xl font-semibold text-slate-ink mb-2">
-            One workspace, two experiences
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-ink tracking-tight">
+            Built for seamless synergy between students and faculty
           </h2>
-          <p className="text-slate-muted">
-            Students and guides each get a view tailored to what they need to do.
-          </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="rounded-xl2 border border-slate-line bg-paper p-7 feature-card-premium">
-            <span className="w-11 h-11 rounded-xl2 bg-brand-soft flex items-center justify-center mb-5">
-              <GraduationCap className="w-5 h-5 text-brand" />
-            </span>
-            <p className="font-display text-xl font-semibold text-slate-ink mb-1">Student</p>
-            <p className="text-sm text-slate-muted mb-5">Everything you need to run your project day to day.</p>
-            <ul className="space-y-3">
-              {STUDENT_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-2.5 text-sm text-slate-ink">
-                  <CheckCircle2 className="w-4 h-4 text-mint mt-0.5 shrink-0" />
-                  {point}
-                </li>
-              ))}
-            </ul>
+
+        <div className="grid lg:grid-cols-2 gap-8 items-start">
+          {/* Student Panel */}
+          <div className="rounded-3xl border border-slate-line bg-gradient-to-b from-white to-slate-50/50 p-7 sm:p-8 shadow-md flex flex-col justify-between space-y-6">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-brand-soft text-brand flex items-center justify-center mb-5">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <h3 className="font-display text-2xl font-bold text-slate-ink mb-2">For Students</h3>
+              <p className="text-sm text-slate-muted mb-6">Everything you need to write code, submit ZIP archives, and collaborate in real-time.</p>
+              <ul className="space-y-3">
+                {STUDENT_POINTS.map((point) => (
+                  <li key={point} className="flex items-start gap-3 text-sm text-slate-ink font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-mint mt-0.5 shrink-0" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Student Live Workspace Animation */}
+            <div className="pt-2">
+              <StudentWorkspaceAnimation />
+            </div>
           </div>
-          <div className="rounded-xl2 border border-slate-line bg-ink p-7 feature-card-premium">
-            <span className="w-11 h-11 rounded-xl2 bg-white/10 flex items-center justify-center mb-5">
-              <ClipboardList className="w-5 h-5 text-mint" />
-            </span>
-            <p className="font-display text-xl font-semibold text-white mb-1">Guide</p>
-            <p className="text-sm text-white/50 mb-5">A real-time, AI-backed view across every team you supervise.</p>
-            <ul className="space-y-3">
-              {GUIDE_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-2.5 text-sm text-white/90">
-                  <CheckCircle2 className="w-4 h-4 text-mint mt-0.5 shrink-0" />
-                  {point}
-                </li>
-              ))}
-            </ul>
+
+          {/* Guide Panel */}
+          <div className="rounded-3xl border border-slate-line bg-gradient-to-b from-slate-900 to-ink p-7 sm:p-8 shadow-xl text-white flex flex-col justify-between space-y-6">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-white/10 text-mint flex items-center justify-center mb-5">
+                <ClipboardList className="w-6 h-6" />
+              </div>
+              <h3 className="font-display text-2xl font-bold text-white mb-2">For Guides & Faculty</h3>
+              <p className="text-sm text-white/60 mb-6">Automated AI supervision, human review checkpoints, and instant consolidated project archives.</p>
+              <ul className="space-y-3">
+                {GUIDE_POINTS.map((point) => (
+                  <li key={point} className="flex items-start gap-3 text-sm text-white/90 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-mint mt-0.5 shrink-0" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Guide Radar & Approval Animation */}
+            <div className="pt-2">
+              <GuideRadarAnimation />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="bg-ink relative overflow-hidden">
-        <div className="absolute inset-0 auth-grid-bg opacity-20" />
-        <div className="absolute -top-24 right-1/4 w-80 h-80 rounded-full bg-brand/20 blur-3xl hero-mesh" />
-        <div className="max-w-6xl mx-auto px-6 py-16 text-center relative z-10">
-          <h2 className="font-display text-2xl sm:text-3xl font-semibold text-white mb-3">
-            Ready to collaborate smarter?
+      {/* FINAL CALL TO ACTION */}
+      <section className="relative overflow-hidden bg-ink py-20 text-white border-t border-white/10">
+        <div className="absolute inset-0 bg-gradient-to-r from-brand/20 via-purple-600/10 to-transparent pointer-events-none" />
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-6">
+          <h2 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight">
+            Ready to upgrade your team collaboration?
           </h2>
-          <p className="text-white/50 mb-8 max-w-lg mx-auto">
-            Set up your workspace in minutes — free for student teams and guides.
+          <p className="text-white/60 text-base sm:text-lg max-w-2xl mx-auto">
+            Experience real-time sockets, AI ZIP verification, and automated project bundling today.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <Link
               to={ROUTES.SIGNUP}
-              className="btn-premium inline-flex items-center gap-2 bg-brand hover:bg-brand-deep text-white text-sm font-semibold px-6 py-3 rounded-lg"
+              className="rounded-xl bg-gradient-to-r from-brand to-purple-600 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-brand/30 hover:scale-105 active:scale-95 transition-transform"
             >
-              Get started <ArrowRight className="w-4 h-4" />
+              Get Started Now — It's Free
             </Link>
             <Link
               to={ROUTES.LOGIN}
-              className="inline-flex items-center gap-2 border border-white/15 text-white text-sm font-semibold px-6 py-3 rounded-lg hover:bg-white/5 transition-colors"
+              className="rounded-xl border border-white/20 bg-white/10 px-8 py-4 text-sm font-bold text-white backdrop-blur-md hover:bg-white/20 transition-colors"
             >
-              Login
+              Sign In to Your Workspace
             </Link>
           </div>
         </div>

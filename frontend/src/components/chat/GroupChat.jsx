@@ -4,6 +4,7 @@ import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 import ChatInput from "./ChatInput";
 import ChatHeader from "./ChatHeader";
+import GroupChatBackground from "../animations/GroupChatBackground";
 import { formatDay } from "../../utils/dateFormatter";
 import { createHighlightController } from "../../utils/highlightController";
 
@@ -107,36 +108,41 @@ const GroupChat = ({
     : messages;
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-cloud">
-      <ChatHeader
-        title={group.name}
-        subtitle={`${members.length} member${members.length === 1 ? "" : "s"} · ${group.project}`}
-        color="#4347C4"
-        isGroup
-        members={members}
-        aiScore={group.collaborationScore}
-        backTo="/app/groups"
-      />
+    <div className="relative flex flex-col h-full min-h-0 bg-cloud/70 overflow-hidden">
+      {/* Dynamic Collaborative Multi-Node Team Animation Background */}
+      <GroupChatBackground />
 
-      <div className="px-4 sm:px-6 pt-3">
-        <div className="max-w-3xl mx-auto flex items-center gap-2 bg-paper border border-slate-line rounded-full px-3.5 py-2 focus-within:border-brand/50 transition-colors">
-          <Search className="w-4 h-4 text-slate-muted shrink-0" aria-hidden="true" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search messages…"
-            aria-label="Search messages in this group"
-            className="flex-1 bg-transparent outline-none text-sm min-w-0"
-          />
-          {query && (
-            <button onClick={() => setQuery("")} aria-label="Clear search">
-              <X className="w-4 h-4 text-slate-muted" />
-            </button>
-          )}
+      <div className="relative z-10">
+        <ChatHeader
+          title={group.name}
+          subtitle={`${members.length} member${members.length === 1 ? "" : "s"} · ${group.project}`}
+          color="#4347C4"
+          isGroup
+          members={members}
+          aiScore={group.collaborationScore}
+          backTo="/app/groups"
+        />
+
+        <div className="px-4 sm:px-6 pt-3">
+          <div className="max-w-3xl mx-auto flex items-center gap-2 bg-paper/85 dark:bg-[#151926]/85 backdrop-blur-md border border-slate-line/80 dark:border-white/10 rounded-full px-3.5 py-2 focus-within:border-brand/50 shadow-xs transition-colors">
+            <Search className="w-4 h-4 text-slate-muted shrink-0" aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search messages…"
+              aria-label="Search messages in this group"
+              className="flex-1 bg-transparent outline-none text-sm min-w-0"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} aria-label="Clear search">
+                <X className="w-4 h-4 text-slate-muted" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-5 min-h-0">
+      <div className="relative z-10 flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-5 min-h-0">
         <div className="max-w-3xl mx-auto">
         {loading ? (
           <MessageSkeleton />

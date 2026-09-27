@@ -19,7 +19,42 @@ const {
   previewTask: orchestratePreviewTask,
 } = require("../services/aiTaskOrchestrationService");
 
+const autoUnlockReadyTasks = async (groupId) => {
+  try {
+    const allGroupTasks = await Task.find({ group: groupId });
+    const completedIds = new Set(
+      allGroupTasks
+        .filter((t) => ["completed", "done"].includes(t.status))
+        .map((t) => String(t._id))
+    );
+
+    for (const t of allGroupTasks) {
+      if (["completed", "done"].includes(t.status)) continue;
+      const deps = t.dependencies || [];
+      const depsReady = !deps.length || deps.every((d) => completedIds.has(String(d)));
+      if (depsReady) {
+        let changed = false;
+        if (t.status === "backlog" || t.status === "pending") {
+          t.status = "todo";
+          t.progress = 0;
+          changed = true;
+        }
+        if (t.isActiveTask !== true) {
+          t.isActiveTask = true;
+          changed = true;
+        }
+        if (changed) {
+          await t.save();
+        }
+      }
+    }
+  } catch (err) {
+    // non-fatal
+  }
+};
+
 exports.list = asyncHandler(async (req, res) => {
+  await autoUnlockReadyTasks(req.group._id);
   const filter = { group: req.group._id };
   if (req.query.status) filter.status = req.query.status;
   if (req.query.assignee) filter.assignee = req.query.assignee;
@@ -48,6 +83,7 @@ exports.list = asyncHandler(async (req, res) => {
 
 /** Kanban board grouped by status column. */
 exports.board = asyncHandler(async (req, res) => {
+  await autoUnlockReadyTasks(req.group._id);
   const filter = { group: req.group._id };
   if (req.user.role === "student" && !req.isGuide) {
     filter.assignee = req.user._id;
@@ -185,6 +221,16 @@ exports.update = asyncHandler(async (req, res) => {
   await task.save();
   if (task.status !== previousStatus) {
     await recalcGroupProgress(req.group._id);
+    if (task.status === "completed" || task.status === "done") {
+      try {
+        const allRemaining = await Task.find({ group: req.group._id }).select("status");
+        const isAllDone = allRemaining.length > 0 && allRemaining.every((t) => ["completed", "done"].includes(t.status) || String(t._id) === String(task._id));
+        if (isAllDone) {
+          const { assembleAndPostFinalProjectZip } = require("../services/groupFinalArchiveService");
+          assembleAndPostFinalProjectZip({ groupId: req.group._id, triggerUser: req.user }).catch(() => {});
+        }
+      } catch (e) {}
+    }
   }
   if (req.body.status && task.assignee && task.status !== previousStatus) {
     await notifyUsers([task.assignee], {
@@ -196,6 +242,7 @@ exports.update = asyncHandler(async (req, res) => {
       task: task._id,
     }, { exclude: req.user._id });
   }
+
 
   const populated = await task.populate("assignee", "name color avatar");
   res.json({ success: true, data: shapeTaskForViewer(populated.toJSON(), req) });
@@ -239,9 +286,22 @@ exports.move = asyncHandler(async (req, res) => {
 
   task.order = order;
   await task.save();
-  if (task.status !== previousStatus) await recalcGroupProgress(req.group._id);
+  if (task.status !== previousStatus) {
+    await recalcGroupProgress(req.group._id);
+    if (task.status === "completed" || task.status === "done") {
+      try {
+        const allRemaining = await Task.find({ group: req.group._id }).select("status");
+        const isAllDone = allRemaining.length > 0 && allRemaining.every((t) => ["completed", "done"].includes(t.status) || String(t._id) === String(task._id));
+        if (isAllDone) {
+          const { assembleAndPostFinalProjectZip } = require("../services/groupFinalArchiveService");
+          assembleAndPostFinalProjectZip({ groupId: req.group._id, triggerUser: req.user }).catch(() => {});
+        }
+      } catch (e) {}
+    }
+  }
   res.json({ success: true, data: shapeTaskForViewer(task.toJSON(), req) });
 });
+
 
 exports.remove = asyncHandler(async (req, res) => {
   if (!req.isGuide && String(req.group.leader) !== String(req.user._id))

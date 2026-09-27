@@ -271,27 +271,22 @@ exports.submit = asyncHandler(async (req, res) => {
       }
     } else {
       // Explicit review submission:
-      if (verification.status === "PASS" && verification.autoCompleteEligible) {
-        task.status = "completed";
-        task.progress = 100;
-        task.verifiedBy = "AI";
-        task.completionStatus = "COMPLETE";
-        task.evidenceQuality = verification.evidenceQuality || "VALID_EVIDENCE";
-        task.completionReason = "AI verified all deliverables, acceptance criteria, and project evidence successfully.";
-      } else if (verification.status === "FAIL") {
+      // AI evaluates and assigns task to guide_review for Guide's final approval
+      if (verification.status === "FAIL") {
         task.status = "changes_requested";
-        // Strict: Wrong or failed submissions NEVER advance progress
         task.progress = previousProgress;
         task.completionStatus = verification.completionStatus || "INCOMPLETE";
         task.evidenceQuality = verification.evidenceQuality || "INVALID_EVIDENCE";
         task.missingRequirements = verification.missingItems || [];
         task.completionReason = verification.feedback || "Submission verification failed: requirements not satisfied.";
       } else {
-        task.status = "in_review";
-        task.progress = Math.max(previousProgress, 50);
-        task.completionStatus = verification.completionStatus || "PARTIALLY_COMPLETE";
-        task.evidenceQuality = verification.evidenceQuality || "PARTIAL_EVIDENCE";
+        task.status = "guide_review";
+        task.progress = Math.max(previousProgress, verification.progressPercent || 90);
+        task.verifiedBy = "AI";
+        task.completionStatus = verification.completionStatus || (verification.status === "PASS" ? "COMPLETE" : "PARTIALLY_COMPLETE");
+        task.evidenceQuality = verification.evidenceQuality || (verification.status === "PASS" ? "VALID_EVIDENCE" : "PARTIAL_EVIDENCE");
         task.missingRequirements = verification.missingItems || [];
+        task.completionReason = verification.feedback || "AI analyzed task submission. Awaiting guide final review and approval.";
       }
     }
     await task.save();
@@ -493,24 +488,14 @@ exports.reanalyze = asyncHandler(async (req, res) => {
   });
   submission.verification = verification;
 
-  if (verification.status === "PASS" && verification.autoCompleteEligible) {
-    task.status = "completed";
-  } else if (verification.status === "FAIL") {
+  if (verification.status === "FAIL") {
     task.status = "changes_requested";
   } else {
     task.status = "guide_review";
   }
+  task.verifiedBy = "AI";
   await task.save();
 
-  if (task.status === "completed") {
-    await executeCompletionAndNextTask({
-      task,
-      submission,
-      group: req.group,
-      user: req.user,
-      isAuto: true,
-    });
-  }
   res.json({ success: true, data: submission });
 });
 
@@ -577,8 +562,16 @@ exports.review = asyncHandler(async (req, res) => {
   submission.reviewedBy = req.user._id;
   submission.reviewedAt = new Date();
   task.status = STATUS_FOR_VERDICT[verdict];
+  task.markModified("submissions");
 
   if (verdict === "approved") {
+    task.status = "completed";
+    task.progress = 100;
+    task.completionStatus = "COMPLETE";
+    task.verifiedBy = req.isGuide ? "GUIDE" : "LEADER";
+    task.completedAt = new Date();
+    task.completionReason = feedback || `Manually approved and completed by ${req.user?.name || "Guide"}.`;
+
     // Grounded verification on guide approval
     const existingVerif = submission.verification?.status
       ? submission.verification
@@ -593,7 +586,15 @@ exports.review = asyncHandler(async (req, res) => {
           feedback: feedback || "Submission reviewed and approved by guide.",
           autoCompleteEligible: true,
         };
-    submission.verification = existingVerif;
+    submission.verification = {
+      ...existingVerif,
+      status: "PASS",
+      completionStatus: "COMPLETE",
+      progressPercent: 100,
+      handledAt: new Date(),
+    };
+    task.markModified("submissions");
+
     await executeCompletionAndNextTask({
       task,
       submission,
@@ -601,10 +602,16 @@ exports.review = asyncHandler(async (req, res) => {
       user: req.user,
       isAuto: false,
     });
-  } else {
+    await task.save();
+    await recalcGroupProgress(req.group._id);
+  } else if (verdict === "changes_requested") {
+    task.status = "changes_requested";
+    task.completionStatus = "INCOMPLETE";
+    task.completionReason = feedback || "Changes requested by guide.";
+    task.markModified("submissions");
     await task.save();
     const notification = NOTIFICATION_FOR_VERDICT(task.title, feedback)[verdict];
-    await notifyUsers([task.assignee?._id], {
+    await notifyUsers([task.assignee?._id || task.assignee], {
       title: notification.title,
       body: notification.body,
       type: "task",
@@ -616,7 +623,30 @@ exports.review = asyncHandler(async (req, res) => {
       req,
       group: req.group._id,
       action: `task.${verdict}`,
-      summary: `${task.title} ${verdict} by ${req.user.name}`,
+      summary: `${task.title} changes requested by ${req.user.name}`,
+      audit: true,
+    });
+    await recalcGroupProgress(req.group._id);
+  } else if (verdict === "rejected") {
+    task.status = "rejected";
+    task.completionStatus = "INCOMPLETE";
+    task.completionReason = feedback || "Submission rejected by guide.";
+    task.markModified("submissions");
+    await task.save();
+    const notification = NOTIFICATION_FOR_VERDICT(task.title, feedback)[verdict];
+    await notifyUsers([task.assignee?._id || task.assignee], {
+      title: notification.title,
+      body: notification.body,
+      type: "task",
+      link: "/app/tasks",
+      group: req.group._id,
+      task: task._id,
+    });
+    await logActivity({
+      req,
+      group: req.group._id,
+      action: `task.${verdict}`,
+      summary: `${task.title} rejected by ${req.user.name}`,
       audit: true,
     });
     await recalcGroupProgress(req.group._id);

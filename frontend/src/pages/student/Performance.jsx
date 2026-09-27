@@ -33,13 +33,16 @@ import { formatFileSize } from "../../utils/helperFunctions";
 import { ROUTES } from "../../utils/constants";
 
 const MetricCard = ({ icon: Icon, label, value, hint, tone }) => (
-  <div className="bg-paper border border-slate-line rounded-xl2 p-4">
-    <span className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${tone}`}>
-      <Icon className="w-4.5 h-4.5" />
-    </span>
-    <p className="text-2xl font-semibold text-slate-ink leading-none">{value}</p>
-    <p className="text-xs font-medium text-slate-ink mt-1.5">{label}</p>
-    {hint && <p className="text-xs text-slate-muted mt-0.5">{hint}</p>}
+  <div className="group relative overflow-hidden rounded-2xl border border-slate-line/80 dark:border-white/10 bg-paper/85 dark:bg-[#151926]/85 p-5 shadow-panel backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-xl">
+    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand via-purple-500 to-mint opacity-70 group-hover:opacity-100 transition-opacity" />
+    <div className="flex items-start justify-between mb-3">
+      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110 ${tone}`}>
+        <Icon className="w-5 h-5" />
+      </span>
+      {hint && <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-muted bg-cloud px-2 py-0.5 rounded-full">{hint}</span>}
+    </div>
+    <p className="text-2xl sm:text-3xl font-display font-bold text-slate-ink leading-tight">{value}</p>
+    <p className="text-xs font-semibold uppercase tracking-wider text-slate-muted mt-1">{label}</p>
   </div>
 );
 

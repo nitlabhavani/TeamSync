@@ -4,6 +4,7 @@ import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 import ChatInput from "./ChatInput";
 import ChatHeader from "./ChatHeader";
+import PrivateChatBackground from "../animations/PrivateChatBackground";
 import { formatDay } from "../../utils/dateFormatter";
 import { useCall } from "../../hooks/useCall";
 
@@ -66,39 +67,44 @@ const SingleChat = ({
     : messages;
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-cloud">
-      <ChatHeader
-        title={peer.name}
-        subtitle={peerSubtitle(peer)}
-        color={peer.color}
-        isGroup={false}
-        backTo={backTo}
-        onBack={onBack}
-        onVoiceCall={() => startCall(peer, "voice")}
-        onVideoCall={() => startCall(peer, "video")}
-        callDisabled={!!call || !webrtcSupported}
-        callDisabledReason={!webrtcSupported ? "Calling isn't supported in this browser" : call ? "A call is already in progress" : undefined}
-      />
+    <div className="relative flex flex-col h-full min-h-0 bg-cloud/70 overflow-hidden">
+      {/* 60fps Encrypted 1-on-1 Dual Orbital Waveform Background */}
+      <PrivateChatBackground />
 
-      <div className="px-4 sm:px-6 pt-3">
-        <div className="max-w-3xl mx-auto flex items-center gap-2 bg-paper border border-slate-line rounded-full px-3.5 py-2 focus-within:border-brand/50 transition-colors">
-          <Search className="w-4 h-4 text-slate-muted shrink-0" aria-hidden="true" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search messages…"
-            aria-label="Search messages in this conversation"
-            className="flex-1 bg-transparent outline-none text-sm min-w-0"
-          />
-          {query && (
-            <button onClick={() => setQuery("")} aria-label="Clear search">
-              <X className="w-4 h-4 text-slate-muted" />
-            </button>
-          )}
+      <div className="relative z-10">
+        <ChatHeader
+          title={peer.name}
+          subtitle={peerSubtitle(peer)}
+          color={peer.color}
+          isGroup={false}
+          backTo={backTo}
+          onBack={onBack}
+          onVoiceCall={() => startCall(peer, "voice")}
+          onVideoCall={() => startCall(peer, "video")}
+          callDisabled={!!call || !webrtcSupported}
+          callDisabledReason={!webrtcSupported ? "Calling isn't supported in this browser" : call ? "A call is already in progress" : undefined}
+        />
+
+        <div className="px-4 sm:px-6 pt-3">
+          <div className="max-w-3xl mx-auto flex items-center gap-2 bg-paper/85 dark:bg-[#151926]/85 backdrop-blur-md border border-slate-line/80 dark:border-white/10 rounded-full px-3.5 py-2 focus-within:border-brand/50 shadow-xs transition-colors">
+            <Search className="w-4 h-4 text-slate-muted shrink-0" aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search messages…"
+              aria-label="Search messages in this conversation"
+              className="flex-1 bg-transparent outline-none text-sm min-w-0"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} aria-label="Clear search">
+                <X className="w-4 h-4 text-slate-muted" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-5 min-h-0">
+      <div className="relative z-10 flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-5 min-h-0">
         <div className="max-w-3xl mx-auto">
           {loading ? (
             <MessageSkeleton />

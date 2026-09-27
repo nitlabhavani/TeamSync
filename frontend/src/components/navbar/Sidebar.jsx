@@ -240,7 +240,7 @@ const Sidebar = ({ role = "student" }) => {
     <>
       {/* Desktop / tablet sidebar */}
       <aside
-        className={`hidden md:flex flex-col shrink-0 bg-ink h-screen sticky top-0 py-5 px-3 transition-[width] duration-200 ${
+        className={`hidden md:flex flex-col shrink-0 bg-ink/95 backdrop-blur-xl border-r border-white/5 h-screen sticky top-0 py-5 px-3 transition-[width] duration-200 z-20 ${
           collapsed ? "w-[76px]" : "w-64"
         }`}
       >

@@ -254,12 +254,7 @@ exports.exportReport = asyncHandler(async (req, res) => {
  * any Task documents (that is an explicitly separate next step).
  */
 exports.projectPlan = asyncHandler(async (req, res) => {
-  const isLeader =
-    String(req.group.leader?._id || req.group.leader || "") === String(req.user._id) ||
-    (req.group.leaderEmail && String(req.user.email || "").toLowerCase() === String(req.group.leaderEmail).toLowerCase());
-  if (!req.isGuide && !isLeader) {
-    throw ApiError.forbidden("Only the guide or team leader can generate an AI project plan");
-  }
+  // Any member of the group, group leader, guide, or admin (verified by requireGroupAccess) can generate the plan
 
   const group = await req.group.populate("members", "name email");
   if (group.leader) {
@@ -344,12 +339,7 @@ exports.projectPlan = asyncHandler(async (req, res) => {
  * blindly (see planTaskService.sanitizeTasks / resolveAssignments).
  */
 exports.createProjectPlanTasks = asyncHandler(async (req, res) => {
-  const isLeader =
-    String(req.group.leader?._id || req.group.leader || "") === String(req.user._id) ||
-    (req.group.leaderEmail && String(req.user.email || "").toLowerCase() === String(req.group.leaderEmail).toLowerCase());
-  if (!req.isGuide && !isLeader) {
-    throw ApiError.forbidden("Only the guide or team leader can create tasks from an AI project plan");
-  }
+  // Any member of the group, group leader, guide, or admin (verified by requireGroupAccess) can create tasks from the plan
 
   const plan = req.body?.plan;
   if (!plan || !Array.isArray(plan.tasks) || plan.tasks.length === 0) {

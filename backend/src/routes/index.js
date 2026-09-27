@@ -93,7 +93,9 @@ router.delete("/groups/:groupId/invitations/:invitationId", protect, requireGrou
 router.delete("/groups/:groupId/members/:userId", protect, requireGroupAccess, groups.removeMember);
 router.post("/groups/:groupId/leader", protect, requireGroupAccess, groups.setLeader);
 router.post("/groups/:groupId/recalc-progress", protect, requireGroupAccess, groups.recalcProgress);
+router.post("/groups/:groupId/final-archive", protect, requireGroupAccess, groups.assembleFinalArchive);
 router.post("/groups/:groupId/ai/auto-plan-tasks", protect, requireGroupAccess, groups.autoPlanTasks);
+
 
 /* --------------- Milestones --------------- */
 router.get("/groups/:groupId/milestones", protect, requireGroupAccess, groups.listMilestones);

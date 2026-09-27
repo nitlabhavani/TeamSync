@@ -736,10 +736,63 @@ async function executeCompletionAndNextTask({ task, submission, group, user, isA
     task: task._id,
   }, { exclude: studentId });
 
+  // Unlock all ready backlog tasks in this group whose dependencies are satisfied
+  try {
+    const allGroupTasks = await Task.find({ group: groupId });
+    const completedIds = new Set(
+      allGroupTasks
+        .filter((t) => DONE_STATUSES.has(t.status) || String(t._id) === String(task._id))
+        .map((t) => String(t._id))
+    );
+
+    for (const t of allGroupTasks) {
+      if (DONE_STATUSES.has(t.status)) continue;
+      const deps = t.dependencies || [];
+      const depsReady = !deps.length || deps.every((d) => completedIds.has(String(d)));
+      if (depsReady) {
+        let changed = false;
+        if (t.status === "backlog" || t.status === "pending") {
+          t.status = "todo";
+          t.progress = 0;
+          changed = true;
+        }
+        if (t.isActiveTask !== true) {
+          t.isActiveTask = true;
+          changed = true;
+        }
+        if (changed) {
+          await t.save();
+          try {
+            emitToGroup(groupId, "group:task:updated", t);
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (err) {
+    // non-fatal unlock error
+  }
+
   // Recalculate group progress
   if (groupId) {
     await recalcGroupProgress(groupId);
   }
+
+  // If all group tasks are completed, automatically assemble master project ZIP and post to Group Chat
+  try {
+    const allRemainingTasks = await Task.find({ group: groupId }).select("status");
+    const isEntireGroupDone = allRemainingTasks.length > 0 && allRemainingTasks.every((t) =>
+      DONE_STATUSES.has(t.status) || String(t._id) === String(task._id)
+    );
+    if (isEntireGroupDone) {
+      const { assembleAndPostFinalProjectZip } = require("./groupFinalArchiveService");
+      assembleAndPostFinalProjectZip({ groupId, triggerUser: user }).catch((zipErr) => {
+        console.warn(`[FinalArchive] Auto-assembly trigger note: ${zipErr.message}`);
+      });
+    }
+  } catch (archiveErr) {
+    // Non-fatal
+  }
+
 
   // Real-time socket dispatch
   try {

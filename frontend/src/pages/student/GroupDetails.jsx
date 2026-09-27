@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "@/lib/router-compat";
-import { MessagesSquare, FolderOpen, Sparkles, Users, MailCheck, Tag, CalendarClock, Wand2 } from "lucide-react";
+import { MessagesSquare, FolderOpen, Sparkles, Users, MailCheck, Tag, CalendarClock, Wand2, FolderArchive, Loader2 } from "lucide-react";
+
 import Navbar from "../../components/navbar/Navbar";
 import GroupChat from "../../components/chat/GroupChat";
 import SharedFiles from "../../components/fileSharing/SharedFiles";
@@ -54,6 +55,21 @@ const GroupDetails = () => {
   const [invites, setInvites] = useState([]);
   const [invitesLoaded, setInvitesLoaded] = useState(false);
   const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [assemblingZip, setAssemblingZip] = useState(false);
+
+  const handleAssembleFinalZip = async () => {
+    try {
+      setAssemblingZip(true);
+      const res = await groupService.assembleFinalArchive(groupId);
+      toastService.showToast("Master Project ZIP assembled and shared in Group Chat!");
+      setTab("chat");
+    } catch (err) {
+      toastService.showToast(err?.message || "Failed to assemble final project ZIP");
+    } finally {
+      setAssemblingZip(false);
+    }
+  };
+
 
   // STEP 34 — chat-specific loading/error state (distinct from the
   // page-level `!group` guard below, which only covers the initial
@@ -304,6 +320,23 @@ const GroupDetails = () => {
               <Wand2 className="w-3 h-3" /> AI Project Understanding
             </button>
           )}
+          <button
+            onClick={handleAssembleFinalZip}
+            disabled={assemblingZip}
+            title="Combine all student submission ZIP folders into a single final project archive"
+            className="inline-flex items-center gap-1.5 bg-mint/15 hover:bg-mint/25 text-mint-deep text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {assemblingZip ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-mint" /> Consolidating ZIP…
+              </>
+            ) : (
+              <>
+                <FolderArchive className="w-3 h-3 text-mint" /> 📦 Final Project ZIP
+              </>
+            )}
+          </button>
+
           <div className="flex items-center gap-2 ml-auto min-w-[120px]">
             <div className="w-20 h-1.5 rounded-full bg-cloud overflow-hidden">
               <div className="h-full rounded-full bg-gradient-to-r from-brand to-mint" style={{ width: `${group.progress}%` }} />

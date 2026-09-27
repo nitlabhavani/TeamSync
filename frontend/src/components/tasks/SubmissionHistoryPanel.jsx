@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, Sparkles, GraduationCap, ListChecks } from "lucide-react";
+import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, Sparkles, GraduationCap, ListChecks, Download, FolderArchive } from "lucide-react";
 import SubmissionFeedbackPanel from "./SubmissionFeedbackPanel";
 import { nameOf as dirName } from "../../services/userDirectory";
 import { formatDay, formatTime } from "../../utils/dateFormatter";
+import { SERVER_URL } from "../../lib/apiClient";
 
 const nameOf = (idOrObj, fallback = "Unknown") => {
   if (idOrObj && typeof idOrObj === "object") return idOrObj.name || dirName(idOrObj.id, fallback);
@@ -197,10 +198,31 @@ export const HistoryRow = ({ submission, isLatest }) => {
               {reviewedDate ? ` on ${reviewedDate}` : ""}
             </p>
           )}
-          {submission.guideFeedback && (
-            <p className="text-slate-ink">
-              <span className="font-medium">Guide feedback: </span>"{submission.guideFeedback}"
-            </p>
+          {submission.files?.length > 0 && (
+            <div className="rounded-lg border border-slate-line bg-cloud/50 p-2 space-y-1">
+              <span className="font-semibold text-slate-ink flex items-center gap-1">
+                <FolderArchive className="w-3.5 h-3.5 text-brand" /> Attached ZIP Files:
+              </span>
+              <div className="space-y-1">
+                {submission.files.map((f, i) => {
+                  const url = f.url ? (f.url.startsWith("http") ? f.url : `${SERVER_URL}${f.url}`) : "#";
+                  return (
+                    <div key={f._id || i} className="flex items-center justify-between gap-2 p-1.5 rounded bg-paper border border-slate-line/60">
+                      <span className="truncate max-w-[200px] text-slate-ink font-mono">{f.name || "archive.zip"}</span>
+                      <a
+                        href={url}
+                        download={f.name || "archive.zip"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-brand text-white text-[10px] font-medium hover:bg-brand-deep transition-colors"
+                      >
+                        <Download className="w-3 h-3" /> Download ZIP
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
           {submission.aiAnalysis && <SubmissionFeedbackPanel analysis={submission.aiAnalysis} />}
         </div>

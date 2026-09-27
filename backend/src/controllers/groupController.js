@@ -498,4 +498,15 @@ exports.recalcProgress = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { progress } });
 });
 
+/** Consolidate all student submission ZIPs into a single master archive and post to Group Chat */
+exports.assembleFinalArchive = asyncHandler(async (req, res) => {
+  const { assembleAndPostFinalProjectZip } = require("../services/groupFinalArchiveService");
+  const result = await assembleAndPostFinalProjectZip({
+    groupId: req.group._id,
+    triggerUser: req.user,
+  });
+  res.json({ success: true, data: result });
+});
+
 exports.recalcGroupProgress = recalcGroupProgress;
+

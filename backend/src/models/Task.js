@@ -259,12 +259,8 @@ const submissionSchema = new mongoose.Schema(
             enum: ["", "VALID_EVIDENCE", "PARTIAL_EVIDENCE", "INVALID_EVIDENCE", "NO_EVIDENCE", "UNREADABLE_EVIDENCE"],
             default: "",
           },
-          deliverableType: {
-            type: String,
-            enum: ["", "code", "frontend", "backend", "database", "documentation", "presentation", "report"],
-            default: "",
-          },
-          progressPercent: { type: Number, enum: [0, 10, 90, 100], default: 0 },
+          deliverableType: { type: String, default: "" },
+          progressPercent: { type: Number, default: 0, min: 0, max: 100 },
           handledAt: { type: Date, default: null },
           evaluatedAt: { type: Date, default: null },
           nextTask: {
@@ -408,13 +404,9 @@ const taskSchema = new mongoose.Schema(
      */
     whatToDo: { type: String, default: "" },
     expectedOutput: { type: String, default: "" },
-    deliverableType: {
-      type: String,
-      enum: ["", "code", "frontend", "backend", "database", "documentation", "presentation", "report"],
-      default: "",
-    },
+    deliverableType: { type: String, default: "" },
     completionCriteria: [{ type: String }],
-    progress: { type: Number, enum: [0, 10, 90, 100], default: 0 },
+    progress: { type: Number, default: 0, min: 0, max: 100 },
     completionStatus: {
       type: String,
       enum: ["", "COMPLETE", "PARTIALLY_COMPLETE", "INCOMPLETE", "INSUFFICIENT_EVIDENCE"],
@@ -427,7 +419,7 @@ const taskSchema = new mongoose.Schema(
     },
     completionReason: { type: String, default: "" },
     missingRequirements: [{ type: String }],
-    verifiedBy: { type: String, enum: ["", "AI", "GUIDE", "LEADER"], default: "" },
+    verifiedBy: { type: String, default: "" },
 
     /**
      * AI-Controlled Task Decomposition & Tracking

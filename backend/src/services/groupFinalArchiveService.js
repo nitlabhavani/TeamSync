@@ -1,0 +1,293 @@
+const fs = require("fs");
+const path = require("path");
+const AdmZip = require("adm-zip");
+const Group = require("../models/Group");
+const Task = require("../models/Task");
+const User = require("../models/User");
+const Message = require("../models/Message");
+
+const FileAsset = require("../models/FileAsset");
+const { emitToGroup } = require("./socketService");
+
+const { notifyUsers } = require("./notificationService");
+const { logActivity } = require("./activityService");
+const { safeExtractZip } = require("./safeZipExtractor");
+
+const uploadRoot = path.join(__dirname, "..", "..", process.env.UPLOAD_DIR || "uploads");
+
+function slugify(text) {
+  return String(text || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function formatBytes(bytes) {
+  if (!bytes && bytes !== 0) return "0 B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+}
+
+/**
+ * Combines all student submitted ZIP folders for a group into a single unified
+ * master project ZIP and posts it directly into the Group Chat.
+ *
+ * @param {object} opts
+ * @param {string|object} opts.groupId
+ * @param {object} [opts.triggerUser]
+ * @returns {Promise<object>}
+ */
+async function assembleAndPostFinalProjectZip({ groupId, triggerUser = null }) {
+  const group = await Group.findById(groupId)
+    .populate("guide", "name email color avatar")
+    .populate("leader", "name email color avatar")
+    .populate("members", "name email color avatar dept");
+
+  if (!group) {
+    throw new Error("Group not found");
+  }
+
+  // Find all tasks for this group
+  const tasks = await Task.find({ group: group._id })
+    .populate("assignee", "name email")
+    .sort({ order: 1, createdAt: 1 });
+
+  if (!tasks.length) {
+    throw new Error("No tasks found for this project group.");
+  }
+
+  const masterZip = new AdmZip();
+  const groupUploadDir = path.join(uploadRoot, String(group._id));
+  fs.mkdirSync(groupUploadDir, { recursive: true });
+
+  const manifestEntries = [];
+  const processedTasks = [];
+
+  for (let idx = 0; idx < tasks.length; idx++) {
+    const t = tasks[idx];
+    const taskSubFolder = `${String(idx + 1).padStart(2, "0")}-${slugify(t.title) || "task"}`;
+
+    // Get the latest valid submission with a zip file
+    const latestSubmission = Array.isArray(t.submissions) && t.submissions.length > 0
+      ? t.submissions[t.submissions.length - 1]
+      : null;
+
+    let zipFileEntry = null;
+    if (latestSubmission && Array.isArray(latestSubmission.files)) {
+      zipFileEntry = latestSubmission.files.find((f) =>
+        (f.name && f.name.toLowerCase().endsWith(".zip")) ||
+        (f.originalName && f.originalName.toLowerCase().endsWith(".zip"))
+      );
+    }
+
+    let extractedFileCount = 0;
+    let foundDiskFile = false;
+
+    if (zipFileEntry) {
+      // Find candidate paths on disk
+      const candidatePaths = [
+        path.join(groupUploadDir, zipFileEntry.name),
+        path.join(uploadRoot, zipFileEntry.name),
+        path.join(uploadRoot, (zipFileEntry.url || "").replace(/^\/?uploads\//, "")),
+        path.join(uploadRoot, String(group._id), (zipFileEntry.url || "").replace(/^\/?uploads\/[^/]+\//, "")),
+      ];
+
+      const resolvedPath = candidatePaths.find((p) => fs.existsSync(p));
+
+      if (resolvedPath) {
+        foundDiskFile = true;
+        let extraction = null;
+        try {
+          extraction = safeExtractZip(resolvedPath);
+          if (extraction && extraction.safeFiles) {
+            for (const safeFile of extraction.safeFiles) {
+              try {
+                const fileBuf = fs.readFileSync(safeFile.absPath);
+                const zipEntryRelPath = path.posix.join(taskSubFolder, safeFile.relPath.replace(/\\/g, "/"));
+                masterZip.addFile(zipEntryRelPath, fileBuf);
+                extractedFileCount++;
+              } catch (readErr) {
+                // skip unreadable individual file
+              }
+            }
+          }
+        } catch (extractErr) {
+          console.warn(`[FinalArchive] Extraction note for task ${t._id}: ${extractErr.message}`);
+        } finally {
+          if (extraction?.cleanup) {
+            extraction.cleanup();
+          }
+        }
+      }
+    }
+
+    const assigneeName = t.assignee?.name || "Team Member";
+    processedTasks.push({
+      task: t,
+      assigneeName,
+      extractedFileCount,
+      hasSubmission: Boolean(foundDiskFile),
+      status: t.status,
+    });
+
+    manifestEntries.push(
+      `| ${idx + 1} | ${t.title} | ${t.module || "General"} | ${assigneeName} | ${t.status.toUpperCase()} | ${extractedFileCount} file(s) |`
+    );
+  }
+
+  // Generate automated README_PROJECT_SUMMARY.md
+  const projectTitle = group.projectTitle || group.name || "TeamSync AI Project";
+  const readmeContent = `# ${projectTitle} — Consolidated Final Project Archive
+
+**Group Name:** ${group.name}  
+**Generated By:** TeamSync AI Final Archive Consolidator  
+**Date of Assembly:** ${new Date().toUTCString()}  
+**Guide / Mentor:** ${group.guide?.name || "Assigned Guide"} (${group.guide?.email || "N/A"})  
+**Team Leader:** ${group.leader?.name || "Team Leader"}  
+
+---
+
+## 📋 Completed Tasks & Deliverables Overview
+
+| # | Task Title | Module | Assignee | Status | Packaged Files |
+|---|------------|--------|----------|--------|----------------|
+${manifestEntries.join("\n")}
+
+---
+
+## 🚀 Directory Structure
+Each task submission has been organized into its respective module folder:
+${processedTasks.map((pt, i) => `- \`${String(i + 1).padStart(2, "0")}-${slugify(pt.task.title)}/\` — (${pt.extractedFileCount} files by ${pt.assigneeName})`).join("\n")}
+
+---
+*Created automatically by TeamSync AI Collaborative Engineering Platform.*
+`;
+
+  masterZip.addFile("README_PROJECT_SUMMARY.md", Buffer.from(readmeContent, "utf8"));
+
+  // Save the master ZIP file
+  const sanitizedGroupName = slugify(group.name) || "teamsync-project";
+  const zipFileName = `${sanitizedGroupName}_complete_project.zip`;
+  const outputZipPath = path.join(groupUploadDir, zipFileName);
+
+  masterZip.writeZip(outputZipPath);
+  const zipStats = fs.statSync(outputZipPath);
+  const zipSize = zipStats.size;
+  const zipSizeFormatted = formatBytes(zipSize);
+  const zipUrl = `/uploads/${group._id}/${zipFileName}`;
+
+  // Record or update FileAsset in group assets
+  const fallbackSenderId =
+    triggerUser?._id ||
+    group.guide?._id ||
+    group.guide ||
+    group.leader?._id ||
+    group.leader ||
+    group.members[0]?._id ||
+    group.members[0];
+
+  try {
+    await FileAsset.findOneAndUpdate(
+      { group: group._id, name: zipFileName },
+      {
+        group: group._id,
+        name: zipFileName,
+        originalName: `${group.name} - Consolidated Final Project.zip`,
+        url: zipUrl,
+        size: zipSize,
+        type: "zip",
+        mimeType: "application/zip",
+        uploadedBy: fallbackSenderId,
+      },
+      { upsert: true, new: true }
+    );
+  } catch (fileAssetErr) {
+    console.warn(`[FinalArchive] FileAsset record error: ${fileAssetErr.message}`);
+  }
+
+  // Format the tasks summary bullet points for chat
+  const taskBulletPoints = processedTasks
+    .map((pt, i) => `  ${i + 1}. **${pt.task.title}** (${pt.task.module || "Module"})\n     ↳ Completed by: **${pt.assigneeName}** (${pt.extractedFileCount} files included)`)
+    .join("\n");
+
+  const chatMessageText = `🎉 **TeamSync AI — Consolidated Final Project Archive Ready!** 🚀\n\nAll tasks for **${group.name}** have been verified and approved!\nAI has combined all students' submitted ZIP folders into a single unified master project ZIP package.\n\n📦 **Consolidated Archive:** \`${zipFileName}\` (${zipSizeFormatted})\n\n📋 **Included Task Modules (${processedTasks.length} tasks):**\n${taskBulletPoints}\n\n⬇️ *Download the complete project bundle below or from the Group Files tab!*`;
+
+  // Create message in Group Chat
+  const chatMessage = await Message.create({
+    group: group._id,
+    sender: fallbackSenderId,
+    text: chatMessageText,
+    attachments: [
+      {
+        name: zipFileName,
+        url: zipUrl,
+        size: zipSize,
+        type: "file",
+        mimeType: "application/zip",
+      },
+    ],
+  });
+
+  const populatedMessage = await Message.findById(chatMessage._id).populate(
+    "sender",
+    "name email color avatar role"
+  );
+
+  // Emit real-time group chat notification
+  try {
+    emitToGroup(group._id, "group:message", populatedMessage);
+    emitToGroup(group._id, "group:final_archive_ready", {
+      groupId: group._id,
+      zipUrl,
+      fileName: zipFileName,
+      size: zipSize,
+      formattedSize: zipSizeFormatted,
+    });
+  } catch (socketErr) {
+    console.warn(`[FinalArchive] Socket emission note: ${socketErr.message}`);
+  }
+
+  // Notify all group members and guide
+  const allRecipients = [
+    group.guide?._id || group.guide,
+    group.leader?._id || group.leader,
+    ...(group.members || []).map((m) => m._id || m),
+  ].filter(Boolean);
+
+  await notifyUsers(allRecipients, {
+    title: "📦 Final Project ZIP Bundle Ready!",
+    body: `AI has compiled the final unified ZIP archive for "${group.name}". Check the group chat to download!`,
+    type: "chat",
+    link: `/app/groups/${group._id}/chat`,
+    group: group._id,
+  });
+
+  await logActivity({
+    req: { user: triggerUser || { _id: fallbackSenderId, name: "TeamSync AI" } },
+    group: group._id,
+    action: "group.final_archive_created",
+    summary: `Consolidated final project ZIP archive assembled and posted to Group Chat (${zipSizeFormatted}).`,
+    meta: {
+      zipUrl,
+      fileName: zipFileName,
+      size: zipSize,
+      taskCount: processedTasks.length,
+    },
+    audit: true,
+  });
+
+  return {
+    ok: true,
+    zipUrl,
+    fileName: zipFileName,
+    size: zipSize,
+    formattedSize: zipSizeFormatted,
+    message: populatedMessage,
+  };
+}
+
+module.exports = {
+  assembleAndPostFinalProjectZip,
+};

@@ -5,7 +5,7 @@ const iconFor = (type) => (type === "file" ? FileUp : type === "ai" ? Sparkles :
 
 const RecentActivity = ({ items = [] }) => {
   return (
-    <div className="bg-paper rounded-xl2 border border-slate-line p-5 shadow-panel">
+    <div className="bg-paper/85 backdrop-blur-md rounded-xl2 border border-slate-line/80 p-5 shadow-panel">
       <p className="text-sm font-medium text-slate-ink mb-4">Recent activity</p>
       {items.length === 0 ? (
         <p className="text-sm text-slate-muted">Nothing new yet — activity will show up here.</p>
