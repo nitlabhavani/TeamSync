@@ -45,8 +45,12 @@ exports.groupAnalytics = asyncHandler(async (req, res) => {
   const days = Number(req.query.days) || 14;
   const since = new Date(Date.now() - days * 86400000);
 
+  const group = await req.group.populate("members", "name color email");
+
   const [messages, tasks, meetings] = await Promise.all([
-    Message.find({ group: req.group._id, createdAt: { $gte: since } }).lean(),
+    Message.find({ group: req.group._id, createdAt: { $gte: since }, deleted: { $ne: true } })
+      .populate("sender", "name color")
+      .lean(),
     Task.find({ group: req.group._id }).populate("assignee", "name color").lean(),
     Meeting.countDocuments({ group: req.group._id }),
   ]);
@@ -56,24 +60,66 @@ exports.groupAnalytics = asyncHandler(async (req, res) => {
     const key = day.toISOString().slice(0, 10);
     return {
       date: key,
-      messages: messages.filter((m) => m.createdAt.toISOString().slice(0, 10) === key).length,
+      messages: messages.filter((m) => m.createdAt && new Date(m.createdAt).toISOString().slice(0, 10) === key).length,
       tasksCompleted: tasks.filter(
-        (t) => t.completedAt && t.completedAt.toISOString().slice(0, 10) === key
+        (t) =>
+          (t.status === "done" || t.status === "completed") &&
+          t.completedAt &&
+          new Date(t.completedAt).toISOString().slice(0, 10) === key
       ).length,
     };
   });
 
   const contribution = {};
+
+  // Pre-seed all active group members so each member shows up in contribution breakdown
+  for (const m of group.members || []) {
+    const uid = String(m._id || m.id);
+    contribution[uid] = {
+      userId: uid,
+      name: m.name || "Member",
+      color: m.color,
+      tasks: 0,
+      done: 0,
+      messages: 0,
+    };
+  }
+
   tasks.forEach((t) => {
-    const name = t.assignee?.name || "Unassigned";
-    contribution[name] = contribution[name] || { name, color: t.assignee?.color, tasks: 0, done: 0, messages: 0 };
-    contribution[name].tasks += 1;
-    if (t.status === "done") contribution[name].done += 1;
+    const uid = t.assignee?._id ? String(t.assignee._id) : (t.assignee ? String(t.assignee) : "unassigned");
+    const name = t.assignee?.name || (uid !== "unassigned" ? contribution[uid]?.name : "Unassigned") || "Unassigned";
+    contribution[uid] = contribution[uid] || {
+      userId: uid,
+      name,
+      color: t.assignee?.color,
+      tasks: 0,
+      done: 0,
+      messages: 0,
+    };
+    contribution[uid].tasks += 1;
+    if (t.status === "done" || t.status === "completed") {
+      contribution[uid].done += 1;
+    }
   });
+
   messages.forEach((m) => {
-    const entry = Object.values(contribution).find((c) => String(c.userId) === String(m.sender));
-    if (entry) entry.messages += 1;
+    const senderId = m.sender?._id ? String(m.sender._id) : (m.sender ? String(m.sender) : "unknown");
+    if (contribution[senderId]) {
+      contribution[senderId].messages += 1;
+    } else if (senderId !== "unknown") {
+      const senderName = m.sender?.name || "Member";
+      contribution[senderId] = {
+        userId: senderId,
+        name: senderName,
+        color: m.sender?.color,
+        tasks: 0,
+        done: 0,
+        messages: 1,
+      };
+    }
   });
+
+  const completedCount = tasks.filter((t) => t.status === "done" || t.status === "completed").length;
 
   res.json({
     success: true,
@@ -84,7 +130,7 @@ exports.groupAnalytics = asyncHandler(async (req, res) => {
         messages: messages.length,
         meetings,
         tasks: tasks.length,
-        completed: tasks.filter((t) => t.status === "done").length,
+        completed: completedCount,
       },
     },
   });

@@ -520,9 +520,9 @@ exports.stats = asyncHandler(async (req, res) => {
         (acc, p) => ({ ...acc, [p]: tasks.filter((t) => t.priority === p).length }),
         {}
       ),
-      overdue: tasks.filter((t) => t.status !== "done" && t.due && new Date(t.due) < now).length,
+      overdue: tasks.filter((t) => t.status !== "done" && t.status !== "completed" && t.due && new Date(t.due) < now).length,
       completionPct: tasks.length
-        ? Math.round((tasks.filter((t) => t.status === "done").length / tasks.length) * 100)
+        ? Math.round((tasks.filter((t) => t.status === "done" || t.status === "completed").length / tasks.length) * 100)
         : 0,
     },
   });

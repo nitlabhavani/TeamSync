@@ -31,7 +31,9 @@ async function recomputeBadges(group) {
 
     const myTasks = tasks.filter((t) => String(t.assignee) === memberId);
     const doneOnTime = myTasks.filter(
-      (t) => t.status === "done" && (!t.due || (t.completedAt && t.completedAt <= t.due))
+      (t) =>
+        (t.status === "done" || t.status === "completed") &&
+        (!t.due || (t.completedAt && t.completedAt <= t.due))
     ).length;
     const msgCount = messages.filter((m) => String(m.sender) === memberId).length;
 
@@ -77,7 +79,9 @@ async function buildLeaderboard(group) {
   return [...map.values()]
     .map((e) => {
       const id = String(e.user._id);
-      const done = tasks.filter((t) => String(t.assignee) === id && t.status === "done").length;
+      const done = tasks.filter(
+        (t) => String(t.assignee) === id && (t.status === "done" || t.status === "completed")
+      ).length;
       const avgScore = e.count ? e.total / e.count : 0;
       return {
         user: e.user,

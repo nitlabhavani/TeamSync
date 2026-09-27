@@ -255,9 +255,9 @@ exports.performance = asyncHandler(async (req, res) => {
     ]),
   ]);
 
-  const done = tasks.filter((t) => t.status === "done");
+  const done = tasks.filter((t) => t.status === "done" || t.status === "completed");
   const onTime = done.filter((t) => !t.due || (t.completedAt && t.completedAt <= t.due));
-  const overdue = tasks.filter((t) => t.status !== "done" && t.due && new Date(t.due) < new Date());
+  const overdue = tasks.filter((t) => t.status !== "done" && t.status !== "completed" && t.due && new Date(t.due) < new Date());
   const avgScore = reviews.length
     ? reviews.reduce((s, r) => {
         const x = r.scores;
@@ -274,7 +274,7 @@ exports.performance = asyncHandler(async (req, res) => {
         completed: done.length,
         onTimeRate: done.length ? Math.round((onTime.length / done.length) * 100) : 0,
         overdue: overdue.length,
-        openHours: tasks.filter((t) => t.status !== "done").reduce((s, t) => s + (t.estimate || 0), 0),
+        openHours: tasks.filter((t) => t.status !== "done" && t.status !== "completed").reduce((s, t) => s + (t.estimate || 0), 0),
       },
       activity: {
         messages: messageCount,

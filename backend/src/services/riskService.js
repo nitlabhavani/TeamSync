@@ -38,7 +38,7 @@ async function computeGroupRisk(group, { persist = true } = {}) {
     ? Math.floor((now - new Date(lastMeeting.when)) / DAY)
     : 30;
 
-  const doneRatio = tasks.length ? tasks.filter((t) => t.status === "done").length / tasks.length : 0;
+  const doneRatio = tasks.length ? tasks.filter((t) => t.status === "done" || t.status === "completed").length / tasks.length : 0;
 
   const drivers = [];
   const add = (key, label, impact, detail) => {
