@@ -15,6 +15,7 @@ const reportService = require("../services/reportService");
 const aiSummaryService = require("../services/aiSummaryService");
 const aiEngine = require("../services/aiEngineClient");
 const planTaskService = require("../services/projectPlanTaskService");
+const mlFeatureService = require("../services/mlFeatureService");
 const { notifyUsers } = require("../services/notificationService");
 const { recalcGroupProgress } = require("./groupController");
 
@@ -631,6 +632,35 @@ exports.projectPerformance = asyncHandler(async (req, res) => {
   const engine = await aiEngine.analyzeProjectPerformance(payload);
   if (!engine.ok) {
     throw new ApiError(503, `AI engine unavailable: ${engine.reason}`);
+  }
+
+  // Enrich with Random Forest ML hybrid predictions (15-feature TeamSync schema)
+  try {
+    const targetMembers = (group.members || []).filter(
+      (m) => !requestedStudentId || String(m._id) === requestedStudentId
+    );
+    const hybridList = await Promise.all(
+      targetMembers.map(async (m) => {
+        const sid = String(m._id);
+        const sTasks = tasks.filter((t) => String(t.assignee) === sid);
+        const sMessages = messages.filter((msg) => String(msg.sender) === sid);
+        const sFiles = files.filter((f) => String(f.uploadedBy) === sid);
+        const mlFeatures = mlFeatureService.computeStudentFeatures({
+          tasks: sTasks,
+          messages: sMessages,
+          files: sFiles,
+        });
+        const hybridRes = await aiEngine.analyzePerformanceHybrid({
+          ...payload,
+          studentId: sid,
+          mlFeatures,
+        });
+        return hybridRes.ok ? hybridRes.data : null;
+      })
+    );
+    engine.data.hybrid_predictions = hybridList.filter(Boolean);
+  } catch {
+    /* Graceful fallback: Rule-based analysis remains authoritative */
   }
 
   res.json({ success: true, data: engine.data });

@@ -61,6 +61,7 @@ const analyzeProjectPlan = (payload) => callEngine("/analyze/project-plan", payl
  * other method here: callers must handle `{ ok: false }`.
  */
 const analyzeProjectPerformance = (payload) => callEngine("/analyze/project-performance", payload);
+const analyzePerformanceHybrid = (payload) => callEngine("/analyze/performance-hybrid", payload);
 /**
  * Group-chat automatic task assignment: analyzes ONE chat message and
  * returns { isTask, tasks: [...], unmatchedMentions: [...], reason }. See
@@ -121,6 +122,7 @@ module.exports = {
   report,
   analyzeProjectPlan,
   analyzeProjectPerformance,
+  analyzePerformanceHybrid,
   analyzeMessageTask,
   analyzeTaskSubmission,
   analyzeTeamRisk,
