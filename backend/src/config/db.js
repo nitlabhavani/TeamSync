@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
  *  - Atlas:  mongodb+srv://<user>:<password>@<cluster>.mongodb.net/teamsync_ai
  */
 module.exports = async function connectDB() {
-  const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/teamsync_ai";
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/teamsync_ai";
   mongoose.set("strictQuery", true);
 
   try {

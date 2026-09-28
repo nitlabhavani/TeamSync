@@ -9,6 +9,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node src/seed/seed.js",
+    "migrate:atlas": "node scripts/migrateLocalToAtlas.js",
     "test": "jest --runInBand"
   },
   "dependencies": {

@@ -215,7 +215,7 @@ const Signup = () => {
           <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
             Full Name
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 bg-cloud/50 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15 transition-all">
+          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
             <User className="w-4 h-4 text-slate-muted shrink-0" />
             <input
               required
@@ -232,7 +232,7 @@ const Signup = () => {
           <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
             College / Institutional Email
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 bg-cloud/50 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15 transition-all">
+          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
             <Mail className="w-4 h-4 text-slate-muted shrink-0" />
             <input
               type="email"
@@ -249,7 +249,7 @@ const Signup = () => {
           <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
             Password
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 bg-cloud/50 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/15 transition-all">
+          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
             <Lock className="w-4 h-4 text-slate-muted shrink-0" />
             <input
               type="password"
