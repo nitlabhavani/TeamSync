@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=teamsync-2" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TeamSync AI — AI collaboration for project teams</title>
+    <meta
+      name="description"
+      content="TeamSync AI gives student project teams chat, file sharing, tasks, meetings and AI collaboration insights in one workspace."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem("teamsync_theme");
+          var savedBg = localStorage.getItem("teamsync_bg_theme");
+          var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var isDark = saved === "dark" || (saved !== "light" && prefersDark);
+          if (isDark) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+          } else {
+            document.documentElement.classList.remove("dark");
+            document.documentElement.style.colorScheme = "light";
+          }
+          if (savedBg && savedBg !== "default") {
+            document.documentElement.setAttribute("data-bg-theme", savedBg);
+          } else {
+            document.documentElement.removeAttribute("data-bg-theme");
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
