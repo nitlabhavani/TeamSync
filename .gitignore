@@ -15,6 +15,8 @@ dist/
 build/
 **/dist/
 **/build/
+.vercel
+**/.vercel/
 
 # Python
 __pycache__/
