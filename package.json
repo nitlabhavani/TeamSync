@@ -1,0 +1,10 @@
+{
+  "name": "teamsync-ai-root",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "npm --prefix backend install",
+    "backend:start": "npm --prefix backend start",
+    "frontend:build": "npm --prefix frontend run build"
+  }
+}
