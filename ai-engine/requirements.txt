@@ -2,6 +2,7 @@ Flask==3.0.3
 flask-cors==4.0.1
 python-dotenv==1.0.1
 python-dateutil==2.9.0.post0
+gunicorn==22.0.0
 
 # ML TRAINING STEP 4 — only what ai-engine/ml/train_student_performance_rf.py needs.
 # Not imported by app.py / analyzers / anything on the request path — the running

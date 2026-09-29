@@ -11,3 +11,14 @@ services:
         value: production
       - key: PORT
         value: 5000
+
+  - type: web
+    name: teamsync-ai-engine
+    env: python
+    plan: free
+    rootDir: ai-engine
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PORT
+        value: 8000
