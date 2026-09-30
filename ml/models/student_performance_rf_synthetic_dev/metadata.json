@@ -1,0 +1,189 @@
+{
+  "modelType": "RandomForestRegressor (scikit-learn)",
+  "target": "student performance / risk (continuous)",
+  "targetSources": [
+    "SYNTHETIC_DEVELOPMENT_DATA"
+  ],
+  "trainingDate": "2026-08-20T11:49:07.186011+00:00",
+  "featureList": [
+    "taskCompletionRatio",
+    "onTimeCompletionRate",
+    "overdueTaskCount",
+    "remainingTaskCount",
+    "inProgressTaskCount",
+    "estimatedEffortAssignedHours",
+    "completedEffortPlannedHours",
+    "deadlineProximityDays",
+    "relevantFileCount",
+    "meaningfulChatMessageCount",
+    "blockerMentionCount",
+    "progressUpdateMentionCount",
+    "activeChatDays",
+    "activityConsistency",
+    "totalTasksAssigned"
+  ],
+  "trainingSampleCount": 168,
+  "validationSampleCount": 36,
+  "testSampleCount": 36,
+  "hyperparameters": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "criterion": "squared_error",
+    "max_depth": null,
+    "max_features": 1.0,
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 2,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 200,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "evaluation": {
+    "train": {
+      "n": 168,
+      "mae": 0.4238061843670548,
+      "rmse": 0.5051297903584683,
+      "r2": 0.8534549087055423,
+      "derived_binary_threshold": 2.675,
+      "accuracy": 0.8928571428571429,
+      "precision": 0.9125,
+      "recall": 0.8690476190476191,
+      "f1": 0.8902439024390244,
+      "confusion_matrix": [
+        [
+          77,
+          7
+        ],
+        [
+          11,
+          73
+        ]
+      ]
+    },
+    "validation": {
+      "n": 36,
+      "mae": 0.9212267925284591,
+      "rmse": 1.0848437570505802,
+      "r2": 0.2891129412759821,
+      "derived_binary_threshold": 2.675,
+      "accuracy": 0.6388888888888888,
+      "precision": 0.6666666666666666,
+      "recall": 0.5555555555555556,
+      "f1": 0.6060606060606061,
+      "confusion_matrix": [
+        [
+          13,
+          5
+        ],
+        [
+          8,
+          10
+        ]
+      ]
+    },
+    "test": {
+      "n": 36,
+      "mae": 0.9886915267255887,
+      "rmse": 1.1472695254549239,
+      "r2": 0.2080527287786339,
+      "derived_binary_threshold": 2.675,
+      "accuracy": 0.6388888888888888,
+      "precision": 0.5555555555555556,
+      "recall": 0.35714285714285715,
+      "f1": 0.43478260869565216,
+      "confusion_matrix": [
+        [
+          18,
+          4
+        ],
+        [
+          9,
+          5
+        ]
+      ]
+    }
+  },
+  "featureImportance": [
+    [
+      "taskCompletionRatio",
+      0.16860805719207653
+    ],
+    [
+      "completedEffortPlannedHours",
+      0.13584765668144372
+    ],
+    [
+      "activityConsistency",
+      0.1009981048954682
+    ],
+    [
+      "onTimeCompletionRate",
+      0.08539484791475002
+    ],
+    [
+      "deadlineProximityDays",
+      0.06967068439784264
+    ],
+    [
+      "blockerMentionCount",
+      0.06875157533584306
+    ],
+    [
+      "estimatedEffortAssignedHours",
+      0.054887454636090925
+    ],
+    [
+      "relevantFileCount",
+      0.05339570106630193
+    ],
+    [
+      "activeChatDays",
+      0.04648896709962898
+    ],
+    [
+      "meaningfulChatMessageCount",
+      0.04631328257742866
+    ],
+    [
+      "remainingTaskCount",
+      0.04556241205805008
+    ],
+    [
+      "inProgressTaskCount",
+      0.04099601952593022
+    ],
+    [
+      "totalTasksAssigned",
+      0.03947802550708748
+    ],
+    [
+      "progressUpdateMentionCount",
+      0.031205482700047294
+    ],
+    [
+      "overdueTaskCount",
+      0.012401728412010246
+    ]
+  ],
+  "classBalanceDerivedBinary": {
+    "positive": 84,
+    "negative": 84,
+    "ratio": 1.0
+  },
+  "limitations": [
+    "Small training set (168 samples) \u2014 RandomForest metrics above have high variance and should not be treated as a stable estimate of real-world accuracy.",
+    "Low validation R\u00b2 (0.29) \u2014 the model explains little of the variance in real outcomes; do not treat predictions as reliable.",
+    "No PeerReview-sourced labels present \u2014 training relied entirely on the weaker submission-verdict fallback signal."
+  ],
+  "datasetVersion": "2026-08-20T11:48:51.066Z",
+  "datasetSource": "SYNTHETIC_DEVELOPMENT_DATA",
+  "datasetScopeNote": "SYNTHETIC DEVELOPMENT DATA ONLY. Procedurally generated (seeded RNG, no MongoDB access) to exercise the Random Forest training/evaluation/persistence pipeline while the real TeamSync MongoDB has 0 labeled student samples. Must NOT be described as, or treated as, real TeamSync user data. See backend/data/ml/teamsync_student_performance_dataset.json for the (currently empty/unavailable) real dataset.",
+  "notIntegrated": "Not connected to the Flask API or the rule-based prediction system. Training artifact only."
+}
