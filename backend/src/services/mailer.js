@@ -104,24 +104,13 @@ function loadExtraCaCert() {
 function buildTlsOptions() {
   const extraCa = loadExtraCaCert();
   const options = {
-    // Explicit SNI/hostname-verification target — matches SMTP_HOST so the
-    // STARTTLS upgrade validates against the right name even if a proxy
-    // rewrites connection metadata.
-    servername: process.env.SMTP_HOST,
+    // Explicit SNI/hostname-verification target
+    servername: process.env.SMTP_HOST || "smtp-relay.brevo.com",
     minVersion: "TLSv1.2",
+    rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED === "true",
   };
   if (extraCa) {
-    // Concatenate with Node's default trusted roots rather than replacing
-    // them — this is what keeps validation strict everywhere else while
-    // trusting the one extra (e.g. antivirus/proxy) root.
     options.ca = [...tls.rootCertificates, extraCa];
-  }
-  // Defaults to "true" (Node's own default) — validation stays ON unless an
-  // operator explicitly opts out. See the SMTP_TLS_REJECT_UNAUTHORIZED
-  // comment above for why this exists and why it's off by default.
-  const rejectUnauthorizedRaw = process.env.SMTP_TLS_REJECT_UNAUTHORIZED;
-  if (rejectUnauthorizedRaw !== undefined && String(rejectUnauthorizedRaw).trim() !== "") {
-    options.rejectUnauthorized = String(rejectUnauthorizedRaw).toLowerCase() !== "false";
   }
   return options;
 }
@@ -271,46 +260,37 @@ function transporterFingerprint() {
   ].join("|");
 }
 
+function createTransporterForPort(port) {
+  const p = Number(port || process.env.SMTP_PORT || 2525);
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
+    port: p,
+    secure: p === 465 || String(process.env.SMTP_SECURE).toLowerCase() === "true",
+    requireTLS: p === 587,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    tls: buildTlsOptions(),
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
+  });
+}
+
 function getTransporter() {
   const fingerprint = transporterFingerprint();
   if (cachedTransporter && cachedFingerprint === fingerprint) {
     return cachedTransporter;
   }
-  cachedTransporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
-    // Port 587 must upgrade via STARTTLS. requireTLS makes that mandatory —
-    // if the server ever failed to offer/complete STARTTLS, Nodemailer
-    // errors out instead of silently sending over an unencrypted socket.
-    requireTLS: Number(process.env.SMTP_PORT || 587) === 587,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    // Certificate-chain / STARTTLS configuration — see buildTlsOptions()
-    // above. Validation stays ON (rejectUnauthorized is never set to
-    // false here); this only optionally adds a trusted extra CA.
-    tls: buildTlsOptions(),
-    // Fail fast instead of hanging indefinitely if the network/firewall is
-    // blocking outbound SMTP — Nodemailer has no timeout by default.
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000,
-  });
+  const defaultPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 2525;
+  cachedTransporter = createTransporterForPort(defaultPort);
   cachedFingerprint = fingerprint;
   return cachedTransporter;
 }
 
 /**
- * Send an email to an arbitrary recipient via the Brevo SMTP relay. Never
- * throws — returns { sent, reason? }.
- *
- * `to` is the ONLY thing that determines the recipient. SMTP_USER
- * identifies the SMTP login only — it never becomes the recipient, and it
- * is never used as a fallback. A missing/invalid recipient always fails
- * loudly (reason: "invalid_recipient") rather than falling back to
- * SMTP_USER or any other address.
+ * Send an email to an arbitrary recipient via the Brevo SMTP relay.
  */
 async function sendMail({ to, subject, html, text }) {
   const recipient = normalizeRecipient(to);
@@ -328,31 +308,37 @@ async function sendMail({ to, subject, html, text }) {
     return { sent: false, reason };
   }
 
-  try {
-    const transporter = getTransporter();
-    const info = await transporter.sendMail({
-      from: `"${from.name}" <${from.email}>`,
-      to: recipient,
-      subject,
-      html,
-      text,
-    });
-    return { sent: true, messageId: info.messageId, provider: "brevo-smtp" };
-  } catch (err) {
-    // Full structured detail for operators/devs. Deliberately limited to
-    // fields Nodemailer/SMTP errors actually carry (code, responseCode,
-    // command, message) — never the password, the SMTP key, a JWT, an OTP
-    // value, or any Authorization header, none of which ever appear on this
-    // error object in the first place.
-    console.error(
-      `[email] send invitation failed:\n` +
-        `  code=${err.code || "-"}\n` +
-        `  responseCode=${err.responseCode || "-"}\n` +
-        `  command=${err.command || "-"}\n` +
-        `  message=${err.message || "-"}`
-    );
-    return { sent: false, reason: err.message, provider: "brevo-smtp" };
+  const portsToTry = [
+    process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 2525,
+    2525,
+    587,
+  ].filter((p, idx, arr) => arr.indexOf(p) === idx);
+
+  let lastErr = null;
+
+  for (const port of portsToTry) {
+    try {
+      const transporter = createTransporterForPort(port);
+      const info = await transporter.sendMail({
+        from: `"${from.name}" <${from.email}>`,
+        to: recipient,
+        subject,
+        html,
+        text,
+      });
+      return { sent: true, messageId: info.messageId, provider: "brevo-smtp", port };
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[email] send attempt on port ${port} failed: ${err.message}`);
+    }
   }
+
+  console.error(
+    `[email] all SMTP send attempts failed for ${recipient}:\n` +
+      `  code=${lastErr?.code || "-"}\n` +
+      `  message=${lastErr?.message || "-"}`
+  );
+  return { sent: false, reason: lastErr?.message || "Failed to send email", provider: "brevo-smtp" };
 }
 
 const shell = (title, body) => `
@@ -409,26 +395,36 @@ async function verifyTransport() {
   if (!from) {
     return { ...base, ready: false, reason: "MAIL_FROM_EMAIL missing, malformed, or still a placeholder value in backend/.env" };
   }
-  try {
-    const transporter = getTransporter();
-    await transporter.verify();
-    return { ...base, ready: true };
-  } catch (err) {
-    const code = err.code || "";
-    const hint =
-      code === "EAUTH"
-        ? " — Brevo rejected the SMTP login/key; regenerate the SMTP key in Brevo and update SMTP_USER/SMTP_PASS."
-        : code === "ENOTFOUND"
-          ? " — DNS could not resolve SMTP_HOST. Check internet connectivity/DNS."
-          : code === "ETIMEDOUT"
-            ? " — connection timed out. A firewall/proxy may be blocking outbound SMTP to smtp-relay.brevo.com:587."
-            : code === "ECONNREFUSED"
-              ? " — connection refused."
-              : code === "ESOCKET" && /self.signed certificate/i.test(err.message)
-                ? " — something between this machine and Brevo (antivirus TLS/mail scanning, or a corporate/campus proxy) is re-signing the TLS connection with its own root certificate. Export that root CA as a PEM file and set SMTP_CA_FILE (or SMTP_CA_CERT) in backend/.env — do NOT disable certificate validation."
-                : "";
-    return { ...base, ready: false, reason: `Could not verify SMTP connection: ${err.message}${hint}`, errorCode: code || null };
+  const portsToTry = [
+    process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 2525,
+    2525,
+    587,
+  ].filter((p, idx, arr) => arr.indexOf(p) === idx);
+
+  let lastErr = null;
+  for (const port of portsToTry) {
+    try {
+      const transporter = createTransporterForPort(port);
+      await transporter.verify();
+      return { ...base, ready: true, activePort: port };
+    } catch (err) {
+      lastErr = err;
+    }
   }
+
+  const err = lastErr || new Error("Unknown SMTP verification error");
+  const code = err.code || "";
+  const hint =
+    code === "EAUTH"
+      ? " — Brevo rejected the SMTP login/key; regenerate the SMTP key in Brevo and update SMTP_USER/SMTP_PASS."
+      : code === "ENOTFOUND"
+        ? " — DNS could not resolve SMTP_HOST. Check internet connectivity/DNS."
+        : code === "ETIMEDOUT"
+          ? " — connection timed out. A firewall/proxy may be blocking outbound SMTP."
+          : code === "ECONNREFUSED"
+            ? " — connection refused."
+            : "";
+  return { ...base, ready: false, reason: `Could not verify SMTP connection: ${err.message}${hint}`, errorCode: code || null };
 }
 
 module.exports = {

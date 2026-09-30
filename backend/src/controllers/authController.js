@@ -104,21 +104,30 @@ exports.signup = asyncHandler(async (req, res) => {
 
   const mail = await sendOtpEmail({ to: normalisedEmail, name, otp: code, purpose: "finish creating your account" });
 
-  if (!mail.sent) {
+  const exposeOtp = process.env.EXPOSE_DEV_OTP === "true" || process.env.NODE_ENV !== "production";
+
+  if (!mail.sent && !exposeOtp) {
     await OtpVerification.deleteOne({ email: normalisedEmail, purpose: "signup" });
     throw new ApiError(503, 
       "We couldn't send the verification email right now. Please check the email service configuration and try again."
     );
   }
 
+  if (!mail.sent) {
+    console.log(`[auth:dev] Email delivery simulated for ${normalisedEmail}. Verification code is: ${code}`);
+  }
+
   res.status(202).json({
     success: true,
-    message: `We sent a 6-digit code to ${normalisedEmail}. Enter it to finish signing up.`,
+    message: mail.sent 
+      ? `We sent a 6-digit code to ${normalisedEmail}. Enter it to finish signing up.`
+      : `Verification code generated. Enter code to finish signing up.`,
     data: {
       email: normalisedEmail,
       otpRequired: true,
       expiresInSeconds: Math.round(OTP_TTL_MS / 1000),
-      emailSent: true,
+      emailSent: Boolean(mail.sent),
+      ...(exposeOtp ? { devOtp: code } : {}),
     },
   });
 });
@@ -199,16 +208,22 @@ exports.resendOtp = asyncHandler(async (req, res) => {
     purpose: "finish creating your account",
   });
 
-  if (!mail.sent) {
+  const exposeOtp = process.env.EXPOSE_DEV_OTP === "true" || process.env.NODE_ENV !== "production";
+
+  if (!mail.sent && !exposeOtp) {
     throw new ApiError(503, 
       "We couldn't send the verification email right now. Please try again in a moment."
     );
   }
 
+  if (!mail.sent) {
+    console.log(`[auth:dev] Resend OTP simulated for ${email}. Verification code is: ${code}`);
+  }
+
   res.json({
     success: true,
     message: "A new verification code has been sent to your email.",
-    data: { emailSent: true },
+    data: { emailSent: Boolean(mail.sent), ...(exposeOtp ? { devOtp: code } : {}) },
   });
 });
 

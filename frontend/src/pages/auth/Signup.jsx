@@ -54,9 +54,13 @@ const Signup = () => {
     if (form.password.length < 8) return setError("Password must be at least 8 characters.");
     setLoading(true);
     try {
-      await signup(form);
+      const res = await signup(form);
       setCooldown(RESEND_SECONDS);
       setStep("otp");
+      if (res?.devOtp) {
+        setOtp(res.devOtp);
+        setNotice(`Verification code: ${res.devOtp}`);
+      }
     } catch (err) {
       setError(err.message || "Something went wrong. Try again.");
     } finally {
@@ -93,9 +97,14 @@ const Signup = () => {
     setError("");
     setNotice("");
     try {
-      await authService.resendSignupOtp({ email: form.email });
+      const res = await authService.resendSignupOtp({ email: form.email });
       setCooldown(RESEND_SECONDS);
-      setNotice("A new code is on its way.");
+      if (res?.devOtp) {
+        setOtp(res.devOtp);
+        setNotice(`New verification code: ${res.devOtp}`);
+      } else {
+        setNotice("A new code is on its way.");
+      }
     } catch (err) {
       setError(err.message);
     }
