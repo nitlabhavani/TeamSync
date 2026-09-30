@@ -4,6 +4,7 @@ const Group = require("../models/Group");
 const User = require("../models/User");
 const { setSocketServer } = require("../services/socketService");
 const { registerCallSignaling } = require("./callSignaling");
+const { isOriginAllowed } = require("../config/cors");
 
 /** True if the socket's user is a member, the guide, or an admin for this group. */
 async function canAccessGroup(socket, groupId) {
@@ -26,7 +27,18 @@ const onlineSockets = new Map(); // userId -> Set<socketId>
 /** Realtime group chat, typing indicators and presence. */
 module.exports = function registerSockets(server) {
   const io = new Server(server, {
-    cors: { origin: (process.env.CLIENT_ORIGIN || "http://localhost:8080").split(","), credentials: true },
+    cors: {
+      origin: (origin, callback) => {
+        if (isOriginAllowed(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Socket origin not allowed by CORS"));
+        }
+      },
+      credentials: true,
+      methods: ["GET", "POST"],
+    },
+    transports: ["websocket", "polling"],
   });
 
   setSocketServer(io);

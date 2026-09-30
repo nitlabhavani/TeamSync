@@ -9,16 +9,13 @@ const rateLimit = require("express-rate-limit");
 
 const routes = require("./routes");
 const { notFound, errorHandler } = require("./middleware/error");
+const { corsOptions } = require("./config/cors");
 
 const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(
-  cors({
-    origin: (process.env.CLIENT_ORIGIN || "http://localhost:8080").split(","),
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

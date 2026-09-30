@@ -41,7 +41,7 @@ from planning.projectPlanner import generate_project_plan
 from utils.responses import ok, fail
 
 app = Flask(__name__)
-CORS(app, origins=settings.allowed_origins)
+CORS(app, origins="*", supports_credentials=True)
 
 
 @app.before_request

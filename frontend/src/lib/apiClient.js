@@ -11,10 +11,12 @@
  * call (login, file upload, everything). Locally this default is correct
  * and harmless, since the backend really is on localhost:5000.
  */
-export const API_URL = (import.meta.env?.VITE_API_URL || "http://localhost:5000/api").replace(
-  /\/$/,
-  "",
-);
+export const API_URL = (
+  import.meta.env?.VITE_API_URL ||
+  (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? "https://teamsync-m6o8.onrender.com/api"
+    : "http://localhost:5000/api")
+).replace(/\/$/, "");
 export const SERVER_URL = API_URL.replace(/\/api$/, "");
 
 if (

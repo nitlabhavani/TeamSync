@@ -11,6 +11,12 @@ services:
         value: production
       - key: PORT
         value: 5000
+      - key: CLIENT_ORIGIN
+        value: https://team-sync-5qgs29my0-bhavanis-projects-20b39995.vercel.app,http://localhost:8080,http://localhost:5173
+      - key: CLIENT_URL
+        value: https://team-sync-5qgs29my0-bhavanis-projects-20b39995.vercel.app
+      - key: AI_ENGINE_URL
+        value: https://teamsync-1-k3to.onrender.com
 
   - type: web
     name: teamsync-ai-engine
@@ -18,7 +24,9 @@ services:
     plan: free
     rootDir: ai-engine
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: PORT
         value: 8000
+      - key: AI_ENGINE_ORIGINS
+        value: "*"

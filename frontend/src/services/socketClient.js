@@ -18,7 +18,8 @@ export const connectSocket = () => {
   const serverUrl = API_URL.replace(/\/api$/, "");
   socket = io(serverUrl, {
     auth: { token },
-    transports: ["websocket"],
+    transports: ["websocket", "polling"],
+    withCredentials: true,
   });
   // Fires on the initial connect AND again after every automatic reconnect.
   socket.on("connect", () => {
