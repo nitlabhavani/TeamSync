@@ -47,14 +47,19 @@ CORS(app, origins=settings.allowed_origins)
 @app.before_request
 def _check_key():
     """Optional shared-secret guard between the Node backend and this engine."""
-    if request.path == "/health" or not settings.api_key:
+    if request.path in ("/", "/health") or not settings.api_key:
         return None
     if request.headers.get("X-AI-Engine-Key") != settings.api_key:
         return fail("Invalid AI engine key", 401)
     return None
 
 
-@app.get("/health")
+@app.route("/", methods=["GET", "HEAD"])
+def root():
+    return ok({"service": "teamsync-ai-engine", "version": "1.0.0", "status": "up"})
+
+
+@app.route("/health", methods=["GET", "HEAD"])
 def health():
     return ok({"service": "teamsync-ai-engine", "version": "1.0.0", "status": "up"})
 
