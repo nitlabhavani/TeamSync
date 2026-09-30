@@ -239,7 +239,7 @@ const VantaNetBackground = ({
   return (
     <canvas
       ref={canvasRef}
-      className={`pointer-events-auto absolute inset-0 h-full w-full ${className}`}
+      className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
       style={{ zIndex: 0 }}
     />
   );

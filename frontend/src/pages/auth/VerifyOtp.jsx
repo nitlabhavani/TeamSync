@@ -71,19 +71,19 @@ const VerifyOtp = () => {
     <div>
       <Link
         to={isReset ? ROUTES.FORGOT_PASSWORD : ROUTES.LOGIN}
-        className="inline-flex items-center gap-1.5 text-xs text-slate-muted hover:text-slate-ink mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" /> Back
       </Link>
 
-      <span className="inline-flex w-11 h-11 rounded-xl2 bg-brand-soft items-center justify-center mb-5">
-        <ShieldCheck className="w-5 h-5 text-brand" strokeWidth={2.5} />
+      <span className="inline-flex w-11 h-11 rounded-xl bg-brand/20 border border-brand/30 items-center justify-center mb-5">
+        <ShieldCheck className="w-5 h-5 text-mint" strokeWidth={2.5} />
       </span>
 
-      <h2 className="font-display text-2xl font-semibold text-slate-ink mb-1.5">
+      <h2 className="font-display text-2xl font-bold text-white mb-1.5">
         {isReset ? "Reset your password" : "Verify your code"}
       </h2>
-      <p className="text-sm text-slate-muted mb-8">
+      <p className="text-sm text-slate-300 mb-8">
         {isReset
           ? `Enter the 6-digit code sent to ${email || "your email"} and choose a new password.`
           : "Enter the 6-digit code we sent to your email."}
@@ -95,41 +95,47 @@ const VerifyOtp = () => {
         {isReset && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-slate-ink mb-1.5 block">New password</label>
-              <div className="flex items-center gap-2 border border-slate-line bg-cloud/40 rounded-lg px-3.5 py-2.5 focus-within:border-brand focus-within:bg-paper focus-within:ring-4 focus-within:ring-brand/10 transition-all">
-                <Lock className="w-4 h-4 text-slate-muted" />
+              <label htmlFor="reset-password" className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 block">New password</label>
+              <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
+                  id="reset-password"
+                  name="password"
                   type="password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="flex-1 outline-none text-sm bg-transparent"
+                  className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
                 />
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-ink mb-1.5 block">Confirm password</label>
-              <div className="flex items-center gap-2 border border-slate-line bg-cloud/40 rounded-lg px-3.5 py-2.5 focus-within:border-brand focus-within:bg-paper focus-within:ring-4 focus-within:ring-brand/10 transition-all">
-                <Lock className="w-4 h-4 text-slate-muted" />
+              <label htmlFor="reset-confirm-password" className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 block">Confirm password</label>
+              <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+                <Lock className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
+                  id="reset-confirm-password"
+                  name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter new password"
-                  className="flex-1 outline-none text-sm bg-transparent"
+                  className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
                 />
               </div>
             </div>
           </div>
         )}
 
-        {notice && <p className="text-xs text-mint bg-mint-soft rounded-lg px-3 py-2 animate-fade-up">{notice}</p>}
-        {error && <p className="text-xs text-coral bg-coral-soft rounded-lg px-3 py-2 animate-fade-up">{error}</p>}
+        {notice && <p className="text-xs text-mint font-medium bg-mint/10 border border-mint/30 rounded-xl px-3.5 py-2.5 animate-fade-up">{notice}</p>}
+        {error && <p className="text-xs text-coral font-medium bg-coral/10 border border-coral/30 rounded-xl px-3.5 py-2.5 animate-fade-up">{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="btn-premium w-full bg-brand hover:bg-brand-deep disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-none text-white text-sm font-semibold py-3 rounded-lg"
+          className="w-full bg-gradient-to-r from-brand via-purple-600 to-indigo-600 text-white text-sm font-bold py-3.5 rounded-xl shadow-lg shadow-brand/25 hover:shadow-brand/40 transition-all disabled:opacity-70 cursor-pointer"
         >
           {loading ? (isReset ? "Resetting…" : "Verifying…") : isReset ? "Reset password" : "Verify code"}
         </button>

@@ -47,61 +47,68 @@ const Login = () => {
   return (
     <div className="space-y-6">
       <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand mb-3">
-          <Sparkles className="w-3.5 h-3.5" /> Workspace Login
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/20 border border-brand/30 px-2.5 py-1 text-xs font-semibold text-brand-soft mb-3">
+          <Sparkles className="w-3.5 h-3.5 text-mint" /> Workspace Login
         </div>
-        <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-ink tracking-tight">
+        <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
           Welcome back
         </h2>
-        <p className="text-sm text-slate-muted mt-1">
+        <p className="text-sm text-slate-300 mt-1">
           Sign in to access your projects, tasks, and real-time chat.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+          <label htmlFor="login-email" className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 block">
             Email Address
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
-            <Mail className="w-4 h-4 text-slate-muted shrink-0" />
+          <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
             <input
+              id="login-email"
+              name="email"
               type="email"
+              autoComplete="email"
+              autoFocus
               required
               placeholder="you@college.edu"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
+              className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
             />
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-ink block">
+            <label htmlFor="login-password" className="text-xs font-bold uppercase tracking-wider text-slate-300 block">
               Password
             </label>
             <Link
               to={ROUTES.FORGOT_PASSWORD}
-              className="text-xs text-brand font-semibold hover:underline"
+              className="text-xs text-brand-soft font-semibold hover:underline"
             >
               Forgot password?
             </Link>
           </div>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
-            <Lock className="w-4 h-4 text-slate-muted shrink-0" />
+          <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+            <Lock className="w-4 h-4 text-slate-400 shrink-0" />
             <input
+              id="login-password"
+              name="password"
               type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
               required
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
+              className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="text-slate-muted hover:text-slate-ink transition-colors p-1"
+              className="text-slate-400 hover:text-white transition-colors p-1 cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -109,7 +116,7 @@ const Login = () => {
         </div>
 
         {error && (
-          <div className="text-xs text-coral font-medium bg-coral-soft/80 border border-coral/30 rounded-xl p-3 animate-fade-up">
+          <div className="text-xs text-coral font-medium bg-coral/10 border border-coral/30 rounded-xl p-3 animate-fade-up">
             {error}
           </div>
         )}
@@ -134,9 +141,9 @@ const Login = () => {
         </button>
       </form>
 
-      <div className="pt-2 text-center text-xs text-slate-muted border-t border-slate-line/60">
+      <div className="pt-2 text-center text-xs text-slate-400 border-t border-white/10">
         New to TeamSync AI?{" "}
-        <Link to={ROUTES.SIGNUP} className="text-brand font-bold hover:underline ml-1">
+        <Link to={ROUTES.SIGNUP} className="text-brand-soft font-bold hover:underline ml-1">
           Create an account
         </Link>
       </div>

@@ -77,7 +77,7 @@ const AuthLayout = () => {
             {/* Glass Card Container (Uiverse / ReactBits style) */}
             <div className="relative group">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-brand via-purple-600 to-mint opacity-25 blur-xl group-hover:opacity-40 transition-opacity" />
-              <div className="relative rounded-3xl border border-white/15 bg-white/95 dark:bg-slate-900/90 p-7 sm:p-9 shadow-2xl backdrop-blur-2xl text-slate-ink">
+              <div className="relative rounded-3xl border border-white/15 bg-slate-900/95 p-7 sm:p-9 shadow-2xl backdrop-blur-2xl text-white">
                 <Outlet />
               </div>
             </div>

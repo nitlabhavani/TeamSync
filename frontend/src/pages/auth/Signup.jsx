@@ -178,20 +178,20 @@ const Signup = () => {
   return (
     <div className="space-y-6">
       <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand mb-3">
-          <Sparkles className="w-3.5 h-3.5" /> Instant Team Workspace
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/20 border border-brand/30 px-2.5 py-1 text-xs font-semibold text-brand-soft mb-3">
+          <Sparkles className="w-3.5 h-3.5 text-mint" /> Instant Team Workspace
         </div>
-        <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-ink tracking-tight">
+        <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
           Create your account
         </h2>
-        <p className="text-sm text-slate-muted mt-1">
+        <p className="text-sm text-slate-300 mt-1">
           Join your team workspace and access automated project tools.
         </p>
       </div>
 
       <form onSubmit={requestOtp} className="space-y-4">
         {/* Role Selector Pills (Uiverse style) */}
-        <div className="grid grid-cols-2 gap-2.5 p-1 rounded-xl bg-cloud/70 border border-slate-line/80">
+        <div className="grid grid-cols-2 gap-2.5 p-1 rounded-xl bg-slate-950/80 border border-white/10">
           {[
             { id: ROLES.STUDENT, label: "Student Team", icon: GraduationCap },
             { id: ROLES.GUIDE, label: "Guide / Faculty", icon: User },
@@ -200,10 +200,10 @@ const Signup = () => {
               type="button"
               key={id}
               onClick={() => setForm({ ...form, role: id })}
-              className={`flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-lg transition-all ${
+              className={`flex items-center justify-center gap-2 text-xs font-bold py-2.5 rounded-lg transition-all cursor-pointer ${
                 form.role === id
-                  ? "bg-white text-brand shadow-sm border border-brand/20 dark:bg-slate-800"
-                  : "text-slate-muted hover:text-slate-ink"
+                  ? "bg-brand text-white shadow-sm border border-brand/30"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
               <Icon className="w-4 h-4" /> {label}
@@ -212,53 +212,61 @@ const Signup = () => {
         </div>
 
         <div>
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+          <label htmlFor="signup-name" className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 block">
             Full Name
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
-            <User className="w-4 h-4 text-slate-muted shrink-0" />
+          <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+            <User className="w-4 h-4 text-slate-400 shrink-0" />
             <input
+              id="signup-name"
+              name="name"
               required
               minLength={2}
               placeholder="Aisha Verma"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
+              className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
             />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+          <label htmlFor="signup-email" className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 block">
             College / Institutional Email
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
-            <Mail className="w-4 h-4 text-slate-muted shrink-0" />
+          <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
             <input
+              id="signup-email"
+              name="email"
               type="email"
+              autoComplete="email"
               required
               placeholder="you@college.edu"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
+              className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
             />
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-ink mb-1.5 block">
+          <label htmlFor="signup-password" className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5 block">
             Password
           </label>
-          <div className="flex items-center gap-2.5 border border-slate-line/80 dark:border-slate-800 bg-cloud/50 dark:bg-slate-950/60 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-paper dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
-            <Lock className="w-4 h-4 text-slate-muted shrink-0" />
+          <div className="flex items-center gap-2.5 border border-white/15 bg-slate-950/80 rounded-xl px-3.5 py-3 focus-within:border-brand focus-within:bg-slate-950 focus-within:ring-4 focus-within:ring-brand/20 transition-all">
+            <Lock className="w-4 h-4 text-slate-400 shrink-0" />
             <input
+              id="signup-password"
+              name="password"
               type="password"
+              autoComplete="new-password"
               required
               minLength={8}
               placeholder="At least 8 characters"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="flex-1 outline-none text-sm bg-transparent text-slate-ink placeholder:text-slate-muted/70"
+              className="flex-1 outline-none text-sm bg-transparent text-white placeholder:text-slate-500 font-medium caret-brand"
             />
           </div>
 
@@ -269,12 +277,12 @@ const Signup = () => {
                   <span
                     key={i}
                     className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                      i < strength.score ? "bg-mint" : "bg-slate-line"
+                      i < strength.score ? "bg-mint" : "bg-white/15"
                     }`}
                   />
                 ))}
               </div>
-              <p className="text-[10px] text-slate-muted text-right font-medium">
+              <p className="text-[10px] text-slate-400 text-right font-medium">
                 {strength.score >= 3 ? "Strong password" : "Add numbers & special characters"}
               </p>
             </div>
@@ -282,7 +290,7 @@ const Signup = () => {
         </div>
 
         {error && (
-          <div className="text-xs text-coral font-medium bg-coral-soft/80 border border-coral/30 rounded-xl p-3 animate-fade-up">
+          <div className="text-xs text-coral font-medium bg-coral/10 border border-coral/30 rounded-xl p-3 animate-fade-up">
             {error}
           </div>
         )}
@@ -307,9 +315,9 @@ const Signup = () => {
         </button>
       </form>
 
-      <div className="pt-2 text-center text-xs text-slate-muted border-t border-slate-line/60">
+      <div className="pt-2 text-center text-xs text-slate-400 border-t border-white/10">
         Already have an account?{" "}
-        <Link to={ROUTES.LOGIN} className="text-brand font-bold hover:underline ml-1">
+        <Link to={ROUTES.LOGIN} className="text-brand-soft font-bold hover:underline ml-1">
           Log in
         </Link>
       </div>
