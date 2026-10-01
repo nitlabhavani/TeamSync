@@ -57,10 +57,7 @@ const Signup = () => {
       const res = await signup(form);
       setCooldown(RESEND_SECONDS);
       setStep("otp");
-      if (res?.devOtp) {
-        setOtp(res.devOtp);
-        setNotice(`Verification code: ${res.devOtp}`);
-      }
+      setNotice("A 6-digit verification code has been sent to your email. Please check your inbox or spam folder.");
     } catch (err) {
       setError(err.message || "Something went wrong. Try again.");
     } finally {
@@ -99,12 +96,7 @@ const Signup = () => {
     try {
       const res = await authService.resendSignupOtp({ email: form.email });
       setCooldown(RESEND_SECONDS);
-      if (res?.devOtp) {
-        setOtp(res.devOtp);
-        setNotice(`New verification code: ${res.devOtp}`);
-      } else {
-        setNotice("A new code is on its way.");
-      }
+      setNotice("A new 6-digit verification code has been sent to your email.");
     } catch (err) {
       setError(err.message);
     }
