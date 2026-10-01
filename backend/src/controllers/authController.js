@@ -104,7 +104,7 @@ exports.signup = asyncHandler(async (req, res) => {
 
   const mail = await sendOtpEmail({ to: normalisedEmail, name, otp: code, purpose: "finish creating your account" });
 
-  const exposeOtp = process.env.EXPOSE_DEV_OTP === "true" || process.env.NODE_ENV !== "production";
+  const exposeOtp = process.env.EXPOSE_DEV_OTP === "true";
 
   if (!mail.sent && !exposeOtp) {
     await OtpVerification.deleteOne({ email: normalisedEmail, purpose: "signup" });
@@ -208,7 +208,7 @@ exports.resendOtp = asyncHandler(async (req, res) => {
     purpose: "finish creating your account",
   });
 
-  const exposeOtp = process.env.EXPOSE_DEV_OTP === "true" || process.env.NODE_ENV !== "production";
+  const exposeOtp = process.env.EXPOSE_DEV_OTP === "true";
 
   if (!mail.sent && !exposeOtp) {
     throw new ApiError(503, 

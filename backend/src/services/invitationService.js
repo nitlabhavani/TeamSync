@@ -6,7 +6,7 @@ const OTP_TTL_MINUTES = Number(process.env.INVITE_OTP_TTL_MINUTES || 5);
 const MAX_ATTEMPTS = Number(process.env.INVITE_OTP_MAX_ATTEMPTS || 5);
 const MAX_RESENDS = Number(process.env.INVITE_OTP_MAX_RESENDS || 5);
 const LOCK_MINUTES = Number(process.env.INVITE_OTP_LOCK_MINUTES || 15);
-const EXPOSE_OTP = process.env.NODE_ENV !== "production" && process.env.EXPOSE_DEV_OTP !== "false";
+const EXPOSE_OTP = process.env.EXPOSE_DEV_OTP === "true";
 
 const generateOtp = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
 const hashOtp = (code) => crypto.createHash("sha256").update(String(code).trim()).digest("hex");
